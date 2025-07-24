@@ -1,0 +1,74 @@
+{
+  "url": "https://mrpdemo.eatanceapp.com/",
+  "timestamp": 1753337311222,
+  "positions": [
+    {
+      "scrollY": 300,
+      "timestamp": 1753337268822
+    },
+    {
+      "scrollY": 900,
+      "timestamp": 1753337270356
+    },
+    {
+      "scrollY": 1000,
+      "timestamp": 1753337270740
+    },
+    {
+      "scrollY": 500,
+      "timestamp": 1753337275128
+    },
+    {
+      "scrollY": 800,
+      "timestamp": 1753337275759
+    },
+    {
+      "scrollY": 1000,
+      "timestamp": 1753337276122
+    }
+  ],
+  "scrollSteps": [
+    {
+      "action": "scroll",
+      "pixels": 300,
+      "command": "scrollByAmount(page, 300);",
+      "description": "Scroll by 300 pixels",
+      "timestamp": 1753337268822
+    },
+    {
+      "action": "scroll",
+      "pixels": 600,
+      "command": "scrollByAmount(page, 600);",
+      "description": "Scroll by 600 pixels",
+      "timestamp": 1753337270356
+    },
+    {
+      "action": "scroll",
+      "pixels": 100,
+      "command": "scrollByAmount(page, 100);",
+      "description": "Scroll by 100 pixels",
+      "timestamp": 1753337270740
+    },
+    {
+      "action": "scroll",
+      "pixels": -500,
+      "command": "scrollByAmount(page, -500);",
+      "description": "Scroll by -500 pixels",
+      "timestamp": 1753337275128
+    },
+    {
+      "action": "scroll",
+      "pixels": 300,
+      "command": "scrollByAmount(page, 300);",
+      "description": "Scroll by 300 pixels",
+      "timestamp": 1753337275759
+    },
+    {
+      "action": "scroll",
+      "pixels": 200,
+      "command": "scrollByAmount(page, 200);",
+      "description": "Scroll by 200 pixels",
+      "timestamp": 1753337276122
+    }
+  ]
+}

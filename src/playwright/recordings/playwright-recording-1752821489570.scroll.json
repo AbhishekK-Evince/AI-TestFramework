@@ -1,0 +1,173 @@
+{
+  "url": "http://eatanceweb.eatanceapp.com/",
+  "timestamp": 1752821521860,
+  "positions": [
+    {
+      "scrollY": 300,
+      "timestamp": 1752821493685
+    },
+    {
+      "scrollY": 0,
+      "timestamp": 1752821494790
+    },
+    {
+      "scrollY": 100,
+      "timestamp": 1752821496867
+    },
+    {
+      "scrollY": 0,
+      "timestamp": 1752821497773
+    },
+    {
+      "scrollY": 587,
+      "timestamp": 1752821499877
+    },
+    {
+      "scrollY": 709,
+      "timestamp": 1752821501729
+    },
+    {
+      "scrollY": 829,
+      "timestamp": 1752821503617
+    },
+    {
+      "scrollY": 949,
+      "timestamp": 1752821505544
+    },
+    {
+      "scrollY": 1069,
+      "timestamp": 1752821507961
+    },
+    {
+      "scrollY": 369,
+      "timestamp": 1752821509269
+    },
+    {
+      "scrollY": 0,
+      "timestamp": 1752821509651
+    },
+    {
+      "scrollY": 300,
+      "timestamp": 1752821512002
+    },
+    {
+      "scrollY": 0,
+      "timestamp": 1752821512762
+    },
+    {
+      "scrollY": 200,
+      "timestamp": 1752821515848
+    },
+    {
+      "scrollY": 647,
+      "timestamp": 1752821516881
+    }
+  ],
+  "scrollSteps": [
+    {
+      "action": "scroll",
+      "pixels": 300,
+      "command": "scrollByAmount(page, 300);",
+      "description": "Scroll by 300 pixels",
+      "timestamp": 1752821493685
+    },
+    {
+      "action": "scroll",
+      "pixels": -300,
+      "command": "scrollByAmount(page, -300);",
+      "description": "Scroll by -300 pixels",
+      "timestamp": 1752821494790
+    },
+    {
+      "action": "scroll",
+      "pixels": 100,
+      "command": "scrollByAmount(page, 100);",
+      "description": "Scroll by 100 pixels",
+      "timestamp": 1752821496867
+    },
+    {
+      "action": "scroll",
+      "pixels": -100,
+      "command": "scrollByAmount(page, -100);",
+      "description": "Scroll by -100 pixels",
+      "timestamp": 1752821497773
+    },
+    {
+      "action": "scroll",
+      "pixels": 587,
+      "command": "scrollByAmount(page, 587);",
+      "description": "Scroll by 587 pixels",
+      "timestamp": 1752821499877
+    },
+    {
+      "action": "scroll",
+      "pixels": 122,
+      "command": "scrollByAmount(page, 122);",
+      "description": "Scroll by 122 pixels",
+      "timestamp": 1752821501729
+    },
+    {
+      "action": "scroll",
+      "pixels": 120,
+      "command": "scrollByAmount(page, 120);",
+      "description": "Scroll by 120 pixels",
+      "timestamp": 1752821503617
+    },
+    {
+      "action": "scroll",
+      "pixels": 120,
+      "command": "scrollByAmount(page, 120);",
+      "description": "Scroll by 120 pixels",
+      "timestamp": 1752821505544
+    },
+    {
+      "action": "scroll",
+      "pixels": 120,
+      "command": "scrollByAmount(page, 120);",
+      "description": "Scroll by 120 pixels",
+      "timestamp": 1752821507961
+    },
+    {
+      "action": "scroll",
+      "pixels": -700,
+      "command": "scrollByAmount(page, -700);",
+      "description": "Scroll by -700 pixels",
+      "timestamp": 1752821509269
+    },
+    {
+      "action": "scroll",
+      "pixels": -369,
+      "command": "scrollByAmount(page, -369);",
+      "description": "Scroll by -369 pixels",
+      "timestamp": 1752821509651
+    },
+    {
+      "action": "scroll",
+      "pixels": 300,
+      "command": "scrollByAmount(page, 300);",
+      "description": "Scroll by 300 pixels",
+      "timestamp": 1752821512002
+    },
+    {
+      "action": "scroll",
+      "pixels": -300,
+      "command": "scrollByAmount(page, -300);",
+      "description": "Scroll by -300 pixels",
+      "timestamp": 1752821512762
+    },
+    {
+      "action": "scroll",
+      "pixels": 200,
+      "command": "scrollByAmount(page, 200);",
+      "description": "Scroll by 200 pixels",
+      "timestamp": 1752821515848
+    },
+    {
+      "action": "scroll",
+      "pixels": 447,
+      "command": "scrollByAmount(page, 447);",
+      "description": "Scroll by 447 pixels",
+      "timestamp": 1752821516881
+    }
+  ]
+}

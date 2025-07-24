@@ -1,0 +1,52 @@
+{
+  "url": "https://practicetestautomation.com/practice-test-login/",
+  "timestamp": 1753166138724,
+  "positions": [
+    {
+      "scrollY": 400,
+      "timestamp": 1753166126736
+    },
+    {
+      "scrollY": 69,
+      "timestamp": 1753166130267
+    },
+    {
+      "scrollY": 300,
+      "timestamp": 1753166135196
+    },
+    {
+      "scrollY": 0,
+      "timestamp": 1753166135827
+    }
+  ],
+  "scrollSteps": [
+    {
+      "action": "scroll",
+      "pixels": 400,
+      "command": "scrollByAmount(page, 400);",
+      "description": "Scroll by 400 pixels",
+      "timestamp": 1753166126736
+    },
+    {
+      "action": "scroll",
+      "pixels": -331,
+      "command": "scrollByAmount(page, -331);",
+      "description": "Scroll by -331 pixels",
+      "timestamp": 1753166130267
+    },
+    {
+      "action": "scroll",
+      "pixels": 231,
+      "command": "scrollByAmount(page, 231);",
+      "description": "Scroll by 231 pixels",
+      "timestamp": 1753166135196
+    },
+    {
+      "action": "scroll",
+      "pixels": -300,
+      "command": "scrollByAmount(page, -300);",
+      "description": "Scroll by -300 pixels",
+      "timestamp": 1753166135827
+    }
+  ]
+}
