@@ -1,0 +1,19 @@
+{
+  "url": "https://practicetestautomation.com/practice-test-login/",
+  "timestamp": 1753166499066,
+  "positions": [
+    {
+      "scrollY": 300,
+      "timestamp": 1753166491980
+    }
+  ],
+  "scrollSteps": [
+    {
+      "action": "scroll",
+      "pixels": 300,
+      "command": "scrollByAmount(page, 300);",
+      "description": "Scroll by 300 pixels",
+      "timestamp": 1753166491980
+    }
+  ]
+}

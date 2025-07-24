@@ -1,0 +1,41 @@
+{
+  "url": "https://mrpdemo.eatanceapp.com/",
+  "timestamp": 1753338344710,
+  "positions": [
+    {
+      "scrollY": 270,
+      "timestamp": 1753338336881
+    },
+    {
+      "scrollY": 400,
+      "timestamp": 1753338337120
+    },
+    {
+      "scrollY": 900,
+      "timestamp": 1753338338350
+    }
+  ],
+  "scrollSteps": [
+    {
+      "action": "scroll",
+      "pixels": 270,
+      "command": "scrollByAmount(page, 270);",
+      "description": "Scroll by 270 pixels",
+      "timestamp": 1753338336881
+    },
+    {
+      "action": "scroll",
+      "pixels": 130,
+      "command": "scrollByAmount(page, 130);",
+      "description": "Scroll by 130 pixels",
+      "timestamp": 1753338337120
+    },
+    {
+      "action": "scroll",
+      "pixels": 500,
+      "command": "scrollByAmount(page, 500);",
+      "description": "Scroll by 500 pixels",
+      "timestamp": 1753338338350
+    }
+  ]
+}

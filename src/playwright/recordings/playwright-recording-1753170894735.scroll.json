@@ -1,0 +1,74 @@
+{
+  "url": "https://practicetestautomation.com/practice-test-login/",
+  "timestamp": 1753170894739,
+  "positions": [
+    {
+      "scrollY": 200,
+      "timestamp": 1753170875348
+    },
+    {
+      "scrollY": 400,
+      "timestamp": 1753170884516
+    },
+    {
+      "scrollY": 500,
+      "timestamp": 1753170885850
+    },
+    {
+      "scrollY": 600,
+      "timestamp": 1753170887032
+    },
+    {
+      "scrollY": 800,
+      "timestamp": 1753170887833
+    },
+    {
+      "scrollY": 1000,
+      "timestamp": 1753170888483
+    }
+  ],
+  "scrollSteps": [
+    {
+      "action": "scroll",
+      "pixels": 200,
+      "command": "scrollByAmount(page, 200);",
+      "description": "Scroll by 200 pixels",
+      "timestamp": 1753170875348
+    },
+    {
+      "action": "scroll",
+      "pixels": 200,
+      "command": "scrollByAmount(page, 200);",
+      "description": "Scroll by 200 pixels",
+      "timestamp": 1753170884516
+    },
+    {
+      "action": "scroll",
+      "pixels": 100,
+      "command": "scrollByAmount(page, 100);",
+      "description": "Scroll by 100 pixels",
+      "timestamp": 1753170885850
+    },
+    {
+      "action": "scroll",
+      "pixels": 100,
+      "command": "scrollByAmount(page, 100);",
+      "description": "Scroll by 100 pixels",
+      "timestamp": 1753170887032
+    },
+    {
+      "action": "scroll",
+      "pixels": 200,
+      "command": "scrollByAmount(page, 200);",
+      "description": "Scroll by 200 pixels",
+      "timestamp": 1753170887833
+    },
+    {
+      "action": "scroll",
+      "pixels": 200,
+      "command": "scrollByAmount(page, 200);",
+      "description": "Scroll by 200 pixels",
+      "timestamp": 1753170888483
+    }
+  ]
+}

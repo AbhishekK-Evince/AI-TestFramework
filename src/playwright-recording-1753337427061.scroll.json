@@ -1,0 +1,96 @@
+{
+  "url": "https://mrpdemo.eatanceapp.com/",
+  "timestamp": 1753337427071,
+  "positions": [
+    {
+      "scrollY": 600,
+      "timestamp": 1753337385206
+    },
+    {
+      "scrollY": 1000,
+      "timestamp": 1753337386456
+    },
+    {
+      "scrollY": 100,
+      "timestamp": 1753337392613
+    },
+    {
+      "scrollY": 700,
+      "timestamp": 1753337393761
+    },
+    {
+      "scrollY": 800,
+      "timestamp": 1753337394513
+    },
+    {
+      "scrollY": 1500,
+      "timestamp": 1753337400798
+    },
+    {
+      "scrollY": 2100,
+      "timestamp": 1753337402363
+    },
+    {
+      "scrollY": 2600,
+      "timestamp": 1753337403849
+    }
+  ],
+  "scrollSteps": [
+    {
+      "action": "scroll",
+      "pixels": 600,
+      "command": "scrollByAmount(page, 600);",
+      "description": "Scroll by 600 pixels",
+      "timestamp": 1753337385206
+    },
+    {
+      "action": "scroll",
+      "pixels": 400,
+      "command": "scrollByAmount(page, 400);",
+      "description": "Scroll by 400 pixels",
+      "timestamp": 1753337386456
+    },
+    {
+      "action": "scroll",
+      "pixels": -900,
+      "command": "scrollByAmount(page, -900);",
+      "description": "Scroll by -900 pixels",
+      "timestamp": 1753337392613
+    },
+    {
+      "action": "scroll",
+      "pixels": 600,
+      "command": "scrollByAmount(page, 600);",
+      "description": "Scroll by 600 pixels",
+      "timestamp": 1753337393761
+    },
+    {
+      "action": "scroll",
+      "pixels": 100,
+      "command": "scrollByAmount(page, 100);",
+      "description": "Scroll by 100 pixels",
+      "timestamp": 1753337394513
+    },
+    {
+      "action": "scroll",
+      "pixels": 700,
+      "command": "scrollByAmount(page, 700);",
+      "description": "Scroll by 700 pixels",
+      "timestamp": 1753337400798
+    },
+    {
+      "action": "scroll",
+      "pixels": 600,
+      "command": "scrollByAmount(page, 600);",
+      "description": "Scroll by 600 pixels",
+      "timestamp": 1753337402363
+    },
+    {
+      "action": "scroll",
+      "pixels": 500,
+      "command": "scrollByAmount(page, 500);",
+      "description": "Scroll by 500 pixels",
+      "timestamp": 1753337403849
+    }
+  ]
+}

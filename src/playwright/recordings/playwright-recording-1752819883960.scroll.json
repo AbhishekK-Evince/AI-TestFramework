@@ -1,0 +1,78 @@
+{
+  "url": "http://eatanceweb.eatanceapp.com/",
+  "timestamp": 1752819906043,
+  "positions": [
+    {
+      "scrollY": 500,
+      "timestamp": 1752819887396
+    },
+    {
+      "scrollY": 0,
+      "timestamp": 1752819888497
+    },
+    {
+      "scrollY": 587,
+      "timestamp": 1752819892972
+    },
+    {
+      "scrollY": 709,
+      "timestamp": 1752819894988
+    },
+    {
+      "scrollY": 829,
+      "timestamp": 1752819896622
+    },
+    {
+      "scrollY": 949,
+      "timestamp": 1752819898372
+    },
+    {
+      "scrollY": 1069,
+      "timestamp": 1752819899521
+    }
+  ],
+  "scrollSteps": [
+    {
+      "action": "scroll",
+      "pixels": 500,
+      "command": "scrollByAmount(page, 500);",
+      "description": "Scroll by 500 pixels"
+    },
+    {
+      "action": "scroll",
+      "pixels": -500,
+      "command": "scrollByAmount(page, -500);",
+      "description": "Scroll by -500 pixels"
+    },
+    {
+      "action": "scroll",
+      "pixels": 587,
+      "command": "scrollByAmount(page, 587);",
+      "description": "Scroll by 587 pixels"
+    },
+    {
+      "action": "scroll",
+      "pixels": 122,
+      "command": "scrollByAmount(page, 122);",
+      "description": "Scroll by 122 pixels"
+    },
+    {
+      "action": "scroll",
+      "pixels": 120,
+      "command": "scrollByAmount(page, 120);",
+      "description": "Scroll by 120 pixels"
+    },
+    {
+      "action": "scroll",
+      "pixels": 120,
+      "command": "scrollByAmount(page, 120);",
+      "description": "Scroll by 120 pixels"
+    },
+    {
+      "action": "scroll",
+      "pixels": 120,
+      "command": "scrollByAmount(page, 120);",
+      "description": "Scroll by 120 pixels"
+    }
+  ]
+}

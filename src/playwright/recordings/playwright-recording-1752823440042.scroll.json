@@ -1,0 +1,140 @@
+{
+  "url": "http://eatanceweb.eatanceapp.com/",
+  "timestamp": 1752823474868,
+  "positions": [
+    {
+      "scrollY": 400,
+      "timestamp": 1752823443268
+    },
+    {
+      "scrollY": 500,
+      "timestamp": 1752823443669
+    },
+    {
+      "scrollY": 600,
+      "timestamp": 1752823444018
+    },
+    {
+      "scrollY": 0,
+      "timestamp": 1752823444875
+    },
+    {
+      "scrollY": 200,
+      "timestamp": 1752823446533
+    },
+    {
+      "scrollY": 0,
+      "timestamp": 1752823447763
+    },
+    {
+      "scrollY": 100,
+      "timestamp": 1752823452581
+    },
+    {
+      "scrollY": 587,
+      "timestamp": 1752823453659
+    },
+    {
+      "scrollY": 769,
+      "timestamp": 1752823459291
+    },
+    {
+      "scrollY": 889,
+      "timestamp": 1752823461925
+    },
+    {
+      "scrollY": 1009,
+      "timestamp": 1752823463360
+    },
+    {
+      "scrollY": 0,
+      "timestamp": 1752823466526
+    }
+  ],
+  "scrollSteps": [
+    {
+      "action": "scroll",
+      "pixels": 400,
+      "command": "scrollByAmount(page, 400);",
+      "description": "Scroll by 400 pixels",
+      "timestamp": 1752823443268
+    },
+    {
+      "action": "scroll",
+      "pixels": 100,
+      "command": "scrollByAmount(page, 100);",
+      "description": "Scroll by 100 pixels",
+      "timestamp": 1752823443669
+    },
+    {
+      "action": "scroll",
+      "pixels": 100,
+      "command": "scrollByAmount(page, 100);",
+      "description": "Scroll by 100 pixels",
+      "timestamp": 1752823444018
+    },
+    {
+      "action": "scroll",
+      "pixels": -600,
+      "command": "scrollByAmount(page, -600);",
+      "description": "Scroll by -600 pixels",
+      "timestamp": 1752823444875
+    },
+    {
+      "action": "scroll",
+      "pixels": 200,
+      "command": "scrollByAmount(page, 200);",
+      "description": "Scroll by 200 pixels",
+      "timestamp": 1752823446533
+    },
+    {
+      "action": "scroll",
+      "pixels": -200,
+      "command": "scrollByAmount(page, -200);",
+      "description": "Scroll by -200 pixels",
+      "timestamp": 1752823447763
+    },
+    {
+      "action": "scroll",
+      "pixels": 100,
+      "command": "scrollByAmount(page, 100);",
+      "description": "Scroll by 100 pixels",
+      "timestamp": 1752823452581
+    },
+    {
+      "action": "scroll",
+      "pixels": 487,
+      "command": "scrollByAmount(page, 487);",
+      "description": "Scroll by 487 pixels",
+      "timestamp": 1752823453659
+    },
+    {
+      "action": "scroll",
+      "pixels": 182,
+      "command": "scrollByAmount(page, 182);",
+      "description": "Scroll by 182 pixels",
+      "timestamp": 1752823459291
+    },
+    {
+      "action": "scroll",
+      "pixels": 120,
+      "command": "scrollByAmount(page, 120);",
+      "description": "Scroll by 120 pixels",
+      "timestamp": 1752823461925
+    },
+    {
+      "action": "scroll",
+      "pixels": 120,
+      "command": "scrollByAmount(page, 120);",
+      "description": "Scroll by 120 pixels",
+      "timestamp": 1752823463360
+    },
+    {
+      "action": "scroll",
+      "pixels": -1009,
+      "command": "scrollByAmount(page, -1009);",
+      "description": "Scroll by -1009 pixels",
+      "timestamp": 1752823466526
+    }
+  ]
+}
