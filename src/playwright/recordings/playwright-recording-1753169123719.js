@@ -1,0 +1,46 @@
+import { test, expect } from '@playwright/test';
+
+test('test', async ({ page }) => {
+  await page.goto('https://practicetestautomation.com/practice-test-login/');
+  await page.locator('#username').click();
+  await page.locator('#username').fill('s');
+  await page.locator('#username').fill('st');
+  await page.locator('#username').fill('stu');
+  await page.locator('#username').fill('stud');
+  await page.locator('#username').fill('studn');
+  await page.locator('#username').fill('studnt');
+  await page.locator('#username').fill('studn');
+  await page.locator('#username').fill('stud');
+  await page.locator('#username').fill('stude');
+  await page.locator('#username').fill('studed');
+  await page.locator('#username').fill('studedn');
+  await page.locator('#username').fill('studednt');
+  await page.locator('#username').fill('studedn');
+  await page.locator('#username').fill('studed');
+  await page.locator('#username').fill('stude');
+  await page.locator('#username').fill('stud');
+  await page.locator('#username').fill('stude');
+  await page.locator('#username').fill('studen');
+  await page.locator('#username').fill('student');
+  await page.locator('#password').click();
+  await page.locator('#password').fill('P');
+  await page.locator('#password').fill('Pa');
+  await page.locator('#password').fill('Pas');
+  await page.locator('#password').fill('Pass');
+  await page.locator('#password').fill('Passw');
+  await page.locator('#password').fill('Passwr');
+  await page.locator('#password').fill('Passwro');
+  await page.locator('#password').fill('Passwr');
+  await page.locator('#password').fill('Passw');
+  await page.locator('#password').fill('Passwo');
+  await page.locator('#password').fill('Passwor');
+  await page.locator('#password').fill('Password');
+  await page.locator('#password').fill('Password1');
+  await page.locator('#password').fill('Password12');
+  await page.locator('#password').fill('Password123');
+  await page.evaluate(() => window.scrollBy(0, 200)); // Auto-recorded scroll
+  await page.locator('#submit').click();
+  await page.locator('div.wp-block-button:nth-of-type(1)').click();
+  await page.locator('section.main-container > div.loop-container > div.post-257 > article').click();
+  await page.locator('a.wp-block-button__link:nth-of-type(1)').click();
+});

@@ -1,0 +1,118 @@
+{
+  "url": "http://eatanceweb.eatanceapp.com/",
+  "timestamp": 1752824077432,
+  "positions": [
+    {
+      "scrollY": 300,
+      "timestamp": 1752824054802
+    },
+    {
+      "scrollY": 0,
+      "timestamp": 1752824055677
+    },
+    {
+      "scrollY": 100,
+      "timestamp": 1752824057384
+    },
+    {
+      "scrollY": 0,
+      "timestamp": 1752824058188
+    },
+    {
+      "scrollY": 587,
+      "timestamp": 1752824060527
+    },
+    {
+      "scrollY": 709,
+      "timestamp": 1752824063360
+    },
+    {
+      "scrollY": 829,
+      "timestamp": 1752824065960
+    },
+    {
+      "scrollY": 949,
+      "timestamp": 1752824068713
+    },
+    {
+      "scrollY": 1069,
+      "timestamp": 1752824071443
+    },
+    {
+      "scrollY": 0,
+      "timestamp": 1752824074047
+    }
+  ],
+  "scrollSteps": [
+    {
+      "action": "scroll",
+      "pixels": 300,
+      "command": "scrollByAmount(page, 300);",
+      "description": "Scroll by 300 pixels",
+      "timestamp": 1752824054802
+    },
+    {
+      "action": "scroll",
+      "pixels": -300,
+      "command": "scrollByAmount(page, -300);",
+      "description": "Scroll by -300 pixels",
+      "timestamp": 1752824055677
+    },
+    {
+      "action": "scroll",
+      "pixels": 100,
+      "command": "scrollByAmount(page, 100);",
+      "description": "Scroll by 100 pixels",
+      "timestamp": 1752824057384
+    },
+    {
+      "action": "scroll",
+      "pixels": -100,
+      "command": "scrollByAmount(page, -100);",
+      "description": "Scroll by -100 pixels",
+      "timestamp": 1752824058188
+    },
+    {
+      "action": "scroll",
+      "pixels": 587,
+      "command": "scrollByAmount(page, 587);",
+      "description": "Scroll by 587 pixels",
+      "timestamp": 1752824060527
+    },
+    {
+      "action": "scroll",
+      "pixels": 122,
+      "command": "scrollByAmount(page, 122);",
+      "description": "Scroll by 122 pixels",
+      "timestamp": 1752824063360
+    },
+    {
+      "action": "scroll",
+      "pixels": 120,
+      "command": "scrollByAmount(page, 120);",
+      "description": "Scroll by 120 pixels",
+      "timestamp": 1752824065960
+    },
+    {
+      "action": "scroll",
+      "pixels": 120,
+      "command": "scrollByAmount(page, 120);",
+      "description": "Scroll by 120 pixels",
+      "timestamp": 1752824068713
+    },
+    {
+      "action": "scroll",
+      "pixels": 120,
+      "command": "scrollByAmount(page, 120);",
+      "description": "Scroll by 120 pixels",
+      "timestamp": 1752824071443
+    },
+    {
+      "action": "scroll",
+      "pixels": -1069,
+      "command": "scrollByAmount(page, -1069);",
+      "description": "Scroll by -1069 pixels",
+      "timestamp": 1752824074047
+    }
+  ]
+}

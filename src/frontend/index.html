@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Test Framework Recorder</title>
+  <style>
+    :root {
+      --primary: #4361ee;
+      --primary-hover: #3a56d4;
+      --secondary: #4cc9f0;
+      --dark: #2b2d42;
+      --light: #f8f9fa;
+      --grey: #e9ecef;
+      --success: #06d6a0;
+      --danger: #e63946;
+      --warning: #ff9e00;
+      --border-radius: 8px;
+      --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      --transition: all 0.3s ease;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--light);
+      color: var(--dark);
+      line-height: 1.6;
+      height: 100vh;
+      overflow-y: auto;
+      margin: 0;
+      padding: 0;
+    }
+
+    .app-container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      min-height: 100vh;
+      overflow-y: auto;
+    }
+
+    .header {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+      padding: 1rem 2rem;
+      box-shadow: var(--box-shadow);
+      text-align: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header h1 {
+      font-size: 1.5rem;
+      font-weight: 500;
+      margin: 0 auto;
+    }
+
+    .nav-tabs {
+        margin-top: 1rem;
+        display: flex;
+        gap: 1.5rem;
+        justify-content: center;
+    }
+
+    .main-content {
+      flex-grow: 1;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      max-width: 1000px;
+      margin: 0 auto;
+      width: 100%;
+      padding-bottom: 3rem; /* Add space before footer */
+      overflow-y: visible;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 2px 16px rgba(67,97,238,0.08);
+      padding: 2rem 2.5rem;
+      margin-bottom: 2rem;
+      width: 100%;
+      box-sizing: border-box;
+      overflow: visible;
+    }
+
+    .card-title {
+      margin-bottom: 1.5rem;
+      font-size: 1.2rem;
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .input-group {
+      display: flex;
+      margin-bottom: 1.5rem;
+    }
+
+    .url-input {
+      flex-grow: 1;
+      padding: 0.75rem 1rem;
+      border: 2px solid var(--grey);
+      border-radius: var(--border-radius) 0 0 var(--border-radius);
+      font-size: 1rem;
+      transition: var(--transition);
+      outline: none;
+    }
+
+    .url-input:focus {
+      border-color: var(--primary);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      border-radius: var(--border-radius);
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+      color: white;
+    }
+
+    .btn-primary { background-color: var(--primary); }
+    .btn-primary:hover { background-color: var(--primary-hover); }
+    .btn-secondary { background-color: #6c757d; color: white; }
+    .btn-secondary:hover { background-color: #5a6268; }
+    .btn-success { background-color: var(--success); }
+    .btn-success:hover { background-color: #05b589; }
+    .btn-danger { background-color: var(--danger); }
+    .btn-danger:hover { background-color: #c9302c; }
+    .btn-info { background-color: #3b82f6; }
+    .btn-info:hover { background-color: #2563eb; }
+    .btn-warning { background-color: var(--warning); }
+    .btn-warning:hover { background-color: #e08c00; }
+    .btn-link { background-color: #1e40af; }
+    .btn-link:hover { background-color: #1d4ed8; }
+
+    .btn:hover {
+      transform: translateY(-2px);
+    }
+
+    .btn-record {
+      border-radius: 0 var(--border-radius) var(--border-radius) 0;
+    }
+
+    .btn-export {
+      margin-left: 1rem;
+    }
+
+    .btn svg {
+      margin-right: 0.5rem;
+    }
+
+    .info-box {
+      background-color: rgba(76, 201, 240, 0.1);
+      border-left: 4px solid var(--secondary);
+      padding: 1rem;
+      margin-top: 1rem;
+      border-radius: 0 var(--border-radius) var(--border-radius) 0;
+    }
+
+    .info-box.success {
+      background-color: rgba(6, 214, 160, 0.1);
+      border-left: 4px solid var(--success);
+    }
+
+    .info-box.error {
+      background-color: rgba(239, 71, 111, 0.1);
+      border-left: 4px solid var(--danger);
+    }
+
+    .info-box strong {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+    }
+
+    .info-box p {
+      margin: 0.5rem 0;
+      font-size: 0.9rem;
+    }
+
+    .info-box details {
+      margin: 0.75rem 0;
+      padding: 0.5rem;
+      background-color: rgba(255, 255, 255, 0.5);
+      border-radius: var(--border-radius);
+    }
+
+    .info-box details summary {
+      font-weight: 500;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .output-container {
+      margin: 0.5rem 0;
+      padding: 0.75rem;
+      background-color: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: var(--border-radius);
+      font-family: monospace;
+      font-size: 0.9rem;
+      max-height: 400px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      line-height: 1.5;
+      color: #333;
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      scrollbar-width: thin;
+      scrollbar-color: var(--primary) #f0f0f0;
+    }
+
+    /* Webkit scrollbar styling */
+    .output-container::-webkit-scrollbar { width: 8px; height: 8px; }
+    .output-container::-webkit-scrollbar-track { background: #f0f0f0; border-radius: 4px; }
+    .output-container::-webkit-scrollbar-thumb { background-color: var(--primary); border-radius: 4px; }
+
+    .output-container:empty::before {
+      content: "No output available";
+      color: #6c757d;
+      font-style: italic;
+    }
+
+    .error-message {
+      color: var(--danger);
+      font-weight: bold;
+      padding: 0.5rem;
+      background-color: rgba(230, 57, 70, 0.1);
+      border-left: 4px solid var(--danger);
+      margin: 0.5rem 0;
+    }
+
+    .recent-recordings ul { list-style: none; padding: 0; }
+    .recent-recordings li {
+      padding: 0.75rem;
+      border-bottom: 1px solid var(--grey);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+    }
+    .recent-recordings .recording-date { color: #6c757d; font-size: 0.8rem; }
+    .recent-recordings .recording-actions { display: flex; gap: 0.5rem; }
+    .recent-recordings .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.8rem; }
+
+    .empty-state { text-align: center; padding: 2rem; color: #6c757d; }
+
+    .footer {
+      text-align: center;
+      padding: 1rem;
+      font-size: 0.8rem;
+      color: #6c757d;
+      background-color: white;
+      border-top: 1px solid var(--grey);
+      margin-top: auto;
+      width: 100%;
+      position: sticky;
+      bottom: 0;
+      z-index: 100;
+    }
+
+    /* Generic Table Styles */
+    .data-table { width: 100%; border-collapse: collapse; font-family: sans-serif; }
+    .data-table thead tr { background-color: #f0f0f0; }
+    .data-table th { padding: 10px 12px; border-bottom: 1px solid #ddd; color: #333; font-weight: 600; text-align: left; }
+    .data-table td { padding: 10px; border: 1px solid #eee; word-wrap: break-word; }
+    .data-table .action-btn { padding: 6px 12px; color: #fff; border: none; border-radius: 4px; font-weight: 500; cursor: pointer; }
+
+    /* Modal Styles */
+    .modal {
+      display: none; position: fixed; z-index: 10001; left: 0; top: 0;
+      width: 100vw; height: 100vh; background: rgba(0,0,0,0.3);
+      justify-content: center; align-items: center;
+    }
+    .modal-content {
+      background: #fff; border-radius: 10px; padding: 2rem;
+      min-width: 340px; max-width: 900px; max-height: 80vh;
+      overflow: auto; position: relative;
+    }
+    .modal-close-btn {
+      position: absolute; top: 1rem; right: 1rem;
+      cursor: pointer; font-size: 1.5rem;
+    }
+    .modal-title { margin-bottom: 1rem; }
+    #script-modal-content { white-space: pre-wrap; font-size: 1em; }
+    #copy-script-btn {
+        float: right; margin-bottom: 1rem; padding: 6px 14px;
+        background: #007BFF; color: #fff; border: none; border-radius: 6px;
+        cursor: pointer; font-size: 14px; font-weight: 500;
+        display: flex; align-items: center; gap: 6px;
+        transition: background 0.2s ease;
+    }
+    #copy-script-btn:hover { background: #005fcc; }
+
+    /* History & Scripts Section Styles */
+    .data-section { display: none; max-width: 1000px; margin: 2rem auto; width: 95%; }
+    .data-section-title { margin-bottom: 1.5rem; font-size: 2rem; font-weight: 700; color: #333; }
+    .filter-bar { display: flex; flex-wrap: wrap; gap: 10px; padding: 12px; background: #f8f9fa; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 1rem; }
+    .filter-bar input, .filter-bar select { padding: 8px 12px; font-size: 14px; border: 1px solid #ccc; border-radius: 6px; }
+    .filter-bar input { flex: 1; min-width: 180px; }
+    .filter-bar select { min-width: 160px; }
+    .action-bar { margin-bottom: 1.5rem; display: flex; gap: 10px; flex-wrap: wrap; }
+    .action-bar .btn { padding: 8px 16px; font-size: 14px; }
+    .table-container { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 16px; overflow-x: auto;}
+
+    @media (max-width: 768px) {
+      .input-group { flex-direction: column; }
+      .url-input { border-radius: var(--border-radius); margin-bottom: 1rem; }
+      .btn-record { border-radius: var(--border-radius); }
+    }
+
+    /* AI Test Case Modal */
+    #testcase-modal { display: none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.3); justify-content: center; align-items: center; }
+    #testcase-modal .modal-content { background: white; border-radius: 14px; padding: 2.5rem; min-width: 520px; max-width: 620px; position: relative; box-shadow: 0 8px 32px rgba(0,0,0,0.18); max-height: 90vh; overflow-y: auto; }
+    #testcase-modal h2 { font-size: 2rem; font-weight: 700; margin-bottom: 2rem; text-align: left; }
+    #testcase-modal #source-type { width: 100%; margin-bottom: 1rem; padding: 0.6rem 0.8rem; border-radius: 6px; border: 1px solid #d0d0d0; font-size: 1.05rem; }
+    #source-fields input, #source-fields textarea { width: 100%; margin-bottom: 0.5rem; padding: 0.6rem 0.8rem; border-radius: 6px; border: 1px solid #d0d0d0; font-size: 1.05rem;}
+    #selected-codegen-file { margin-bottom: 1rem; font-size: 0.98rem; color: #222; background: #f8f9fa; border-radius: 6px; padding: 0.5rem 0.8rem; border: 1px solid #e0e0e0; display: none; }
+    #testcase-modal .section-title { font-size: 1.15rem; font-weight: 600; padding-bottom: 0.5rem; }
+    #testcase-modal .testcase-types { display: grid; grid-template-columns: 1fr 1fr; gap: 1.1rem 2.2rem; margin-bottom: 2.2rem; background: #f8f9fa; border-radius: 8px; padding: 1.2rem; border: 1px solid #e0e0e0; }
+    #testcase-modal .testcase-types .form-check { display: flex; align-items: center; gap: 0.4rem; font-size: 1rem; }
+    #testcase-modal .modal-actions { display: flex; gap: 1.2rem; margin-top: 1.5rem; justify-content: flex-start; }
+    #testcase-modal .btn { padding: 0.9rem 2.2rem; font-size: 1.1rem; font-weight: 600; }
+    #testcase-modal #testcase-result { margin-top: 1.2rem; background: #f8f9fa; border-radius: 6px; padding: 1rem; max-height: 250px; overflow: auto; }
+    #testcase-modal .spinner { display: none; margin: 1rem auto; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 32px; height: 32px; animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <header class="header">
+      <h1>AI Test Framework Recorder</h1>
+      <nav class="nav-tabs">
+        <button id="tab-main" class="btn btn-primary" data-target="main-content">Recorder</button>
+        <button id="tab-history" class="btn btn-secondary" data-target="testcase-history-section">Test Case History</button>
+        <button id="tab-scripts" class="btn btn-secondary" data-target="generated-scripts-section">Generated Scripts</button>
+      </nav>
+    </header>
+
+    <main class="main-content" id="main-content">
+      <section class="card">
+        <h2 class="card-title">Record New Test</h2>
+        <div class="input-group">
+          <input id="codegen-url" class="url-input" placeholder="Enter site URL (default: https://example.com)" type="url"/>
+          <button id="start-codegen" class="btn btn-primary btn-record">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg>
+            Start Recording
+          </button>
+          <button id="export-codegen" class="btn btn-success btn-export">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            Export Recording
+          </button>
+        </div>
+        <div id="info" class="info-box">
+          <p>Use Playwright codegen to record your test by clicking on "Start Recording". When finished, click "Export Recording" to save the generated file.</p>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 class="card-title">Recent Recordings</h2>
+        <div id="recent-recordings" class="recent-recordings">
+          <div class="empty-state"><p>No recent recordings available</p></div>
+        </div>
+      </section>
+    </main>
+
+    <section id="testcase-history-section" class="data-section">
+      <h2 class="data-section-title">Test Case History</h2>
+      <div class="filter-bar">
+        <input id="history-search" type="text" placeholder="Search..." />
+        <select id="history-filter-source">
+          <option value="">All Sources</option>
+          <option value="jira">Jira</option><option value="azure">Azure</option><option value="image">Image</option><option value="manual">Manual</option>
+        </select>
+        <select id="history-filter-type">
+          <option value="">All Types</option>
+          <option value="dashboard_functional">Functional</option><option value="dashboard_negative">Negative</option><option value="dashboard_ui">UI</option>
+          <option value="dashboard_ux">UX</option><option value="dashboard_compatibility">Compatibility</option><option value="dashboard_performance">Performance</option>
+        </select>
+      </div>
+      <div class="action-bar">
+        <button id="refresh-history" class="btn btn-primary">Refresh</button>
+        <button id="export-history" class="btn btn-secondary">Export as CSV</button>
+      </div>
+      <div class="table-container"><div id="testcase-history-table"></div></div>
+    </section>
+
+    <section id="generated-scripts-section" class="data-section">
+      <h2 class="data-section-title">Generated Scripts</h2>
+      <div class="filter-bar">
+        <input id="scripts-search" type="text" placeholder="Search..." />
+        <select id="scripts-filter-source">
+           <option value="">All Sources</option>
+           <option value="jira">Jira</option><option value="azure">Azure</option><option value="image">Image</option><option value="manual">Manual</option>
+        </select>
+        <select id="scripts-filter-type">
+          <option value="">All Types</option>
+          <option value="dashboard_functional">Functional</option><option value="dashboard_negative">Negative</option><option value="dashboard_ui">UI</option>
+          <option value="dashboard_ux">UX</option><option value="dashboard_compatibility">Compatibility</option><option value="dashboard_performance">Performance</option>
+        </select>
+      </div>
+      <div class="action-bar">
+        <button id="refresh-scripts" class="btn btn-primary">Refresh</button>
+        <button id="export-scripts" class="btn btn-secondary">Export as CSV</button>
+      </div>
+      <div class="table-container"><div id="generated-scripts-table"></div></div>
+    </section>
+
+    <footer class="footer">
+      <p>AI Test Framework Recorder &copy; 2025</p>
+    </footer>
+
+    <div id="history-details-modal" class="modal">
+      <div class="modal-content">
+        <span id="close-history-details" class="modal-close-btn">&times;</span>
+        <h3 id="history-details-title" class="modal-title"></h3>
+        <div id="history-details-content"></div>
+      </div>
+    </div>
+
+    <div id="script-modal" class="modal">
+      <div class="modal-content">
+        <span id="close-script-modal" class="modal-close-btn">&times;</span>
+        <h3 class="modal-title">Generated Playwright Script</h3>
+        <button id="copy-script-btn">📋 Copy</button>
+        <pre id="script-modal-content"></pre>
+      </div>
+    </div>
+
+    <div id="testcase-modal" class="modal">
+      <div class="modal-content">
+        <span id="close-testcase-modal" class="modal-close-btn">&times;</span>
+        <h2>AI-Powered Test Case Creation</h2>
+        <form id="testcase-form">
+          <div>
+            <label for="source-type">Source Type:</label>
+            <select id="source-type" name="sourceType">
+              <option value="jira">Jira</option><option value="azure">Azure</option><option value="image">Image</option><option value="manual">Manual</option>
+            </select>
+          </div>
+          <div id="selected-codegen-file"></div>
+          <div id="source-fields"></div>
+          <div class="section-title">Test Case Types</div>
+          <div class="testcase-types">
+            <div class="form-check"><input type="checkbox" name="testCaseTypes" value="dashboard_functional" id="check-functional"><label for="check-functional">Functional - Positive</label></div>
+            <div class="form-check"><input type="checkbox" name="testCaseTypes" value="dashboard_negative" id="check-negative"><label for="check-negative">Functional - Negative</label></div>
+            <div class="form-check"><input type="checkbox" name="testCaseTypes" value="dashboard_ui" id="check-ui"><label for="check-ui">UI Tests</label></div>
+            <div class="form-check"><input type="checkbox" name="testCaseTypes" value="dashboard_ux" id="check-ux"><label for="check-ux">UX Tests</label></div>
+            <div class="form-check"><input type="checkbox" name="testCaseTypes" value="dashboard_compatibility" id="check-compatibility"><label for="check-compatibility">Compatibility</label></div>
+            <div class="form-check"><input type="checkbox" name="testCaseTypes" value="dashboard_performance" id="check-performance"><label for="check-performance">Performance</label></div>
+          </div>
+          <div class="modal-actions">
+            <button type="submit" class="btn btn-primary">Generate Tests</button>
+            <button type="button" id="reset-testcase-form" class="btn btn-secondary">Reset</button>
+            <button type="button" id="close-testcase-form" class="btn btn-danger">Close</button>
+          </div>
+          <div class="spinner" id="testcase-spinner"></div>
+        </form>
+        <div id="testcase-result" style="display:none;"></div>
+      </div>
+    </div>
+
+  </div>
+  <script src="renderer.js"></script>
+</body>
+</html>
