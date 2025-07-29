@@ -1,0 +1,24 @@
+{
+  "sessionCleanup": {
+    "enabled": true,
+    "retentionPeriods": {
+      "testcase_generator": 30,
+      "codegen_recordings": 60,
+      "generated_scripts": 45,
+      "winston_logs": 90
+    },
+    "cleanupInterval": 24,
+    "description": {
+      "testcase_generator": "Keep test cases for 30 days",
+      "codegen_recordings": "Keep recordings for 60 days", 
+      "generated_scripts": "Keep scripts for 45 days",
+      "winston_logs": "Keep logs for 90 days",
+      "cleanupInterval": "Run cleanup every 24 hours"
+    }
+  },
+  "sessionManagement": {
+    "userIdGeneration": "Based on machine info (hostname + username + platform)",
+    "sessionIdGeneration": "Random 32-byte hex string",
+    "dataIsolation": "All data is filtered by userId to ensure user isolation"
+  }
+} 

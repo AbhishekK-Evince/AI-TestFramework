@@ -6,7 +6,174 @@ const fs = require('fs-extra');
 const { exec, spawn } = require('child_process');
 const glob = require('glob');
 const os = require('os');
-require('dotenv').config({ path: './config/.env' });
+const crypto = require('crypto');
+const envPath = app.isPackaged
+  ? path.join(process.resourcesPath, 'config', '.env')
+  : path.join(__dirname, '../../config/.env');
+const isDev = !app.isPackaged;
+if (isDev) {
+  if (!fs.existsSync(envPath)) {
+    console.error(`[FATAL] .env file not found at: ${envPath}`);
+    dialog.showErrorBox('Missing .env', `The .env file was not found at: ${envPath}\nPlease ensure your development environment includes config/.env with all required secrets.`);
+    app.quit();
+  }
+  require('dotenv').config({ path: envPath });
+}
+const keytar = require('keytar');
+
+// Session management
+let currentSessionId = null;
+let currentUserId = null;
+
+// Session cleanup configuration
+const SESSION_CLEANUP_CONFIG = {
+  // Retention periods in days
+  testcase_generator: 30,    // Keep test cases for 30 days
+  codegen_recordings: 60,    // Keep recordings for 60 days
+  generated_scripts: 45,     // Keep scripts for 45 days
+  winston_logs: 90,          // Keep logs for 90 days
+  
+  // Auto cleanup interval in hours
+  cleanupInterval: 24,       // Run cleanup every 24 hours
+  
+  // Last cleanup timestamp
+  lastCleanup: null
+};
+
+// Generate unique session ID
+function generateSessionId() {
+  return crypto.randomBytes(32).toString('hex');
+}
+
+// Generate unique user ID based on machine info
+function generateUserId() {
+  const machineInfo = os.hostname() + os.userInfo().username + os.platform();
+  return crypto.createHash('sha256').update(machineInfo).digest('hex');
+}
+
+// Initialize session
+function initializeSession() {
+  currentSessionId = generateSessionId();
+  currentUserId = generateUserId();
+  console.log(`Session initialized - User ID: ${currentUserId}, Session ID: ${currentSessionId}`);
+  return { sessionId: currentSessionId, userId: currentUserId };
+}
+
+// Get current session info
+function getCurrentSession() {
+  if (!currentSessionId || !currentUserId) {
+    return initializeSession();
+  }
+  return { sessionId: currentSessionId, userId: currentUserId };
+}
+
+// Clean up old session data
+async function cleanupOldSessionData() {
+  if (!process.env.MONGODB_URI || !process.env.MONGODB_DB) {
+    return;
+  }
+
+  try {
+    const client = new MongoClient(process.env.MONGODB_URI, {});
+    await client.connect();
+    const db = client.db(process.env.MONGODB_DB);
+    
+    const now = new Date();
+    let totalDeleted = 0;
+    
+    // Clean up each collection based on retention period
+    for (const [collectionName, retentionDays] of Object.entries(SESSION_CLEANUP_CONFIG)) {
+      if (typeof retentionDays === 'number' && collectionName !== 'cleanupInterval' && collectionName !== 'lastCleanup') {
+        const cutoffDate = new Date(now.getTime() - (retentionDays * 24 * 60 * 60 * 1000));
+        
+        try {
+          const collection = db.collection(collectionName);
+          const result = await collection.deleteMany({
+            timestamp: { $lt: cutoffDate }
+          });
+          
+          if (result.deletedCount > 0) {
+            console.log(`Cleaned up ${result.deletedCount} old documents from ${collectionName} (older than ${retentionDays} days)`);
+            totalDeleted += result.deletedCount;
+          }
+        } catch (error) {
+          console.error(`Error cleaning up ${collectionName}:`, error.message);
+        }
+      }
+    }
+    
+    await client.close();
+    
+    if (totalDeleted > 0) {
+      console.log(`Session cleanup completed: ${totalDeleted} total documents removed`);
+    }
+    
+    // Update last cleanup timestamp
+    SESSION_CLEANUP_CONFIG.lastCleanup = now;
+    
+  } catch (error) {
+    console.error('Session cleanup failed:', error);
+  }
+}
+
+// Schedule periodic cleanup
+function scheduleSessionCleanup() {
+  const intervalMs = SESSION_CLEANUP_CONFIG.cleanupInterval * 60 * 60 * 1000; // Convert hours to milliseconds
+  
+  setInterval(async () => {
+    console.log('Running scheduled session cleanup...');
+    await cleanupOldSessionData();
+  }, intervalMs);
+  
+  console.log(`Session cleanup scheduled every ${SESSION_CLEANUP_CONFIG.cleanupInterval} hours`);
+}
+
+async function getOrPromptSecret(service, account, promptText) {
+  let secret = await keytar.getPassword(service, account);
+  if (!secret) {
+    const { response, checkboxChecked } = await dialog.showMessageBox({
+      type: 'question',
+      buttons: ['OK'],
+      title: 'Enter Secret',
+      message: promptText,
+      detail: `Please enter your ${account} for ${service}.`,
+      input: true // Not natively supported, see below for workaround
+    });
+    // Electron's dialog does not support input natively; in production, use a custom modal or HTML prompt
+    // For now, fallback to process.env or throw
+    secret = process.env[account];
+    if (!secret) {
+      dialog.showErrorBox('Missing Secret', `${account} is required to run the app.`);
+      app.quit();
+    }
+    await keytar.setPassword(service, account, secret);
+  }
+  return secret;
+}
+
+async function loadSecrets() {
+  const service = 'ai-test-framework';
+  const keys = [
+    'OPENAI_API_KEY',
+    'MONGODB_URI',
+    'MONGODB_DB',
+    'LANGCHAIN_TRACKING_V2',
+    'LANGCHAIN_API_KEY',
+    'LANGCHAIN_PROJECT',
+    'LANGSMITH_ENDPOINT'
+  ];
+  let missing = [];
+  for (const key of keys) {
+    const value = await keytar.getPassword(service, key) || process.env[key];
+    if (!value && ['OPENAI_API_KEY','MONGODB_URI','MONGODB_DB'].includes(key)) missing.push(key);
+    if (value) process.env[key] = value;
+  }
+  if (missing.length) {
+    dialog.showErrorBox('Missing Secret', `One or more required secrets (${missing.join(', ')}) are missing. Please set them using keytar or in your .env for development.`);
+    app.quit();
+  }
+}
+
 const { ChatOpenAI } = require('langchain/chat_models/openai');
 const { LangChainTracer } = require('langchain/callbacks');
 const { MongoClient } = require('mongodb');
@@ -19,27 +186,72 @@ require('winston-mongodb');
 const Sentry = require('@sentry/electron/main');
 Sentry.init({
   dsn: 'https://73705e67134cfefe6e6ac28ac9f00a66@o4509711455420416.ingest.us.sentry.io/4509711457452032',
+  environment: process.env.NODE_ENV || 'development',
+  debug: false,
+  integrations: [],
+  beforeSend(event) {
+    // Filter out cache-related errors that are harmless
+    if (event.exception && event.exception.values) {
+      const filteredValues = event.exception.values.filter(exception => {
+        const message = exception.value || '';
+        return !message.includes('cache') && 
+               !message.includes('_captureRequestSession') &&
+               !message.includes('Access is denied');
+      });
+      if (filteredValues.length === 0) {
+        return null; // Don't send the event
+      }
+      event.exception.values = filteredValues;
+    }
+    return event;
+  }
 });
-// Express API error tracking
+
+// Express API error tracking - Simplified to avoid integration conflicts
 const SentryNode = require('@sentry/node');
 SentryNode.init({
   dsn: 'https://73705e67134cfefe6e6ac28ac9f00a66@o4509711455420416.ingest.us.sentry.io/4509711457452032',
+  environment: process.env.NODE_ENV || 'development',
+  debug: false,
+  autoSessionTracking: false, // Disable session tracking to avoid conflicts
+  integrations: [], // Disable all integrations to avoid conflicts
+  beforeSend(event) {
+    // Filter out cache-related errors that are harmless
+    if (event.exception && event.exception.values) {
+      const filteredValues = event.exception.values.filter(exception => {
+        const message = exception.value || '';
+        return !message.includes('cache') && 
+               !message.includes('_captureRequestSession') &&
+               !message.includes('Access is denied');
+      });
+      if (filteredValues.length === 0) {
+        return null; // Don't send the event
+      }
+      event.exception.values = filteredValues;
+    }
+    return event;
+  }
 });
 
 // Winston logger setup
 const logger = winston.createLogger({
-  level: 'info',
+  level: 'warn', // Changed from 'info' to 'warn' to reduce verbose logging
   format: winston.format.combine(
     winston.format.timestamp(),
     winston.format.json()
   ),
   transports: [
-    new winston.transports.Console(),
-    new winston.transports.File({ filename: 'app.log' }),
+    new winston.transports.Console({
+      level: 'warn' // Only show warnings and errors in console
+    }),
+    new winston.transports.File({ 
+      filename: 'app.log',
+      level: 'info' // Keep full logging in file
+    }),
     ...(process.env.MONGODB_URI && process.env.MONGODB_DB ? [
       new winston.transports.MongoDB({
         db: process.env.MONGODB_URI,
-        options: { useUnifiedTopology: true },
+        options: {},
         collection: 'winston_logs',
         tryReconnect: true,
         metaKey: 'meta',
@@ -59,11 +271,17 @@ const store = new Store({
 let mainWindow;
 
 function createWindow() {
+  // Determine correct preload path for dev and prod
+  const isDev = !app.isPackaged;
+  const preloadPath = isDev
+    ? path.join(__dirname, 'renderer', 'renderer.js')
+    : path.join(process.resourcesPath, 'app.asar.unpacked', 'src', 'electron', 'renderer', 'renderer.js');
+
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     webPreferences: {
-      preload: path.join(__dirname, 'renderer', 'renderer.js'),
+      preload: preloadPath,
       nodeIntegration: true,
       contextIsolation: false,
     },
@@ -79,9 +297,306 @@ function createWindow() {
   }
 }
 
-app.whenReady().then(() => {
-  createWindow();
+const REQUIRED_SECRETS = [
+  'OPENAI_API_KEY',
+  'MONGODB_URI',
+  'MONGODB_DB',
+  'LANGCHAIN_TRACKING_V2',
+  'LANGCHAIN_API_KEY',
+  'LANGCHAIN_PROJECT',
+  'LANGSMITH_ENDPOINT'
+];
+ipcMain.handle('save-secrets', async (event, secrets) => {
+  try {
+    for (const key of Object.keys(secrets)) {
+      await keytar.setPassword('ai-test-framework', key, secrets[key]);
+    }
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('get-current-settings', async (event) => {
+  try {
+    const service = 'ai-test-framework';
+    const settings = {};
+    const keys = [
+      'OPENAI_API_KEY',
+      'MONGODB_URI',
+      'MONGODB_DB',
+      'LANGCHAIN_TRACKING_V2',
+      'LANGCHAIN_API_KEY',
+      'LANGCHAIN_PROJECT',
+      'LANGSMITH_ENDPOINT'
+    ];
+    
+    for (const key of keys) {
+      const value = await keytar.getPassword(service, key);
+      if (value) {
+        settings[key] = value;
+      }
+    }
+    
+    return { success: true, settings };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('test-connection', async (event) => {
+  try {
+    // Test OpenAI connection
+    const openaiKey = await keytar.getPassword('ai-test-framework', 'OPENAI_API_KEY');
+    if (!openaiKey) {
+      return { success: false, error: 'OpenAI API key not configured' };
+    }
+
+    // Test MongoDB connection
+    const mongodbUri = await keytar.getPassword('ai-test-framework', 'MONGODB_URI');
+    const mongodbDb = await keytar.getPassword('ai-test-framework', 'MONGODB_DB');
+    
+    if (mongodbUri && mongodbDb) {
+      try {
+        const client = new MongoClient(mongodbUri, {});
+        await client.connect();
+        await client.db(mongodbDb).admin().ping();
+        await client.close();
+      } catch (mongoErr) {
+        return { success: false, error: `MongoDB connection failed: ${mongoErr.message}` };
+      }
+    }
+
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('get-app-info', async (event) => {
+  try {
+    const session = getCurrentSession();
+    const info = {
+      version: require('../../package.json').version,
+      platform: process.platform,
+      nodeVersion: process.version,
+      electronVersion: process.versions.electron,
+      sessionId: session.sessionId,
+      userId: session.userId
+    };
+    return { success: true, info };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+// Session management IPC handlers
+ipcMain.handle('get-session-info', async (event) => {
+  try {
+    const session = getCurrentSession();
+    return { success: true, session };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('reset-session', async (event) => {
+  try {
+    const session = initializeSession();
+    return { success: true, session };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+// Session cleanup management IPC handlers
+ipcMain.handle('get-cleanup-config', async (event) => {
+  try {
+    return { 
+      success: true, 
+      config: SESSION_CLEANUP_CONFIG,
+      lastCleanup: SESSION_CLEANUP_CONFIG.lastCleanup
+    };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('update-cleanup-config', async (event, newConfig) => {
+  try {
+    // Update configuration
+    Object.assign(SESSION_CLEANUP_CONFIG, newConfig);
+    return { success: true, config: SESSION_CLEANUP_CONFIG };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('run-cleanup-now', async (event) => {
+  try {
+    await cleanupOldSessionData();
+    return { success: true, message: 'Cleanup completed successfully' };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+// Save and open a generated script
+ipcMain.handle('save-and-open-script', async (event, scriptContent, timestamp) => {
+  try {
+    console.log('Saving and opening script with timestamp:', timestamp);
+    
+    // Create a unique filename based on timestamp
+    const date = new Date(parseInt(timestamp));
+    const dateStr = date.toISOString().replace(/[:.]/g, '-').split('T')[0];
+    const timeStr = date.toTimeString().replace(/[:.]/g, '-').split(' ')[0];
+    const filename = `generated-script-${dateStr}-${timeStr}.js`;
+    
+    // Save to the exports directory
+    const exportsDir = path.join(__dirname, '../../generated/exports');
+    if (!fs.existsSync(exportsDir)) {
+      await fs.mkdir(exportsDir, { recursive: true });
+    }
+    
+    const filePath = path.join(exportsDir, filename);
+    
+    // Clean up the script content by removing markdown formatting and adding wait times
+    let cleanScriptContent = scriptContent;
+    
+    // First, remove all markdown formatting
+    cleanScriptContent = cleanScriptContent
+      .replace(/```javascript\s*/g, '')  // Remove opening ```javascript
+      .replace(/```\s*/g, '')            // Remove closing ```
+      .replace(/```js\s*/g, '')          // Remove opening ```js
+      .replace(/```\s*/g, '')            // Remove closing ```
+      .trim();                           // Remove extra whitespace
+    
+    // Add wait times after each action for better reliability
+    cleanScriptContent = cleanScriptContent
+      .replace(/\)\.click\(\);/g, ').click();\n  await page.waitForTimeout(1000);')
+      .replace(/\)\.click\(\)/g, ').click();\n  await page.waitForTimeout(1000)')
+      .replace(/await page\.goto\([^)]+\);/g, (match) => match + '\n  await page.waitForTimeout(2000);')
+      .replace(/await page\.evaluate\([^)]+\);/g, (match) => match + '\n  await page.waitForTimeout(500);');
+    
+    // Save the script in a readable format with comments
+    const readableScript = `// Generated Playwright Test Script
+// Generated on: ${new Date(parseInt(timestamp)).toLocaleString()}
+// This script contains the test functions generated by AI
+
+const { test, expect } = require('@playwright/test');
+
+${cleanScriptContent}
+
+// To run this script, you can:
+// 1. Use the "Run Test" button in the AI Test Framework
+// 2. Or run manually with: npx playwright test ${filename}
+// 3. Or integrate into your Playwright test suite
+`;
+    
+    await fs.writeFile(filePath, readableScript, 'utf8');
+    
+    console.log('Script saved to:', filePath);
+    
+    // Open the file in the default editor
+    await shell.openPath(filePath);
+    
+    return { success: true, filePath };
+  } catch (error) {
+    console.error('Error saving and opening script:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+});
+
+// Save and run a generated script
+ipcMain.handle('save-and-run-script', async (event, scriptContent, timestamp) => {
+  try {
+    console.log('Saving and running script with timestamp:', timestamp);
+    
+    // Create a unique filename based on timestamp
+    const date = new Date(parseInt(timestamp));
+    const dateStr = date.toISOString().replace(/[:.]/g, '-').split('T')[0];
+    const timeStr = date.toTimeString().replace(/[:.]/g, '-').split(' ')[0];
+    const filename = `generated-script-${dateStr}-${timeStr}.js`;
+    
+    // Save to the exports directory
+    const exportsDir = path.join(__dirname, '../../generated/exports');
+    if (!fs.existsSync(exportsDir)) {
+      await fs.mkdir(exportsDir, { recursive: true });
+    }
+    
+    const filePath = path.join(exportsDir, filename);
+    
+    // Clean up the script content by removing markdown formatting
+    let cleanScriptContent = scriptContent;
+    
+    // First, remove all markdown formatting
+    cleanScriptContent = cleanScriptContent
+      .replace(/```javascript\s*/g, '')  // Remove opening ```javascript
+      .replace(/```\s*/g, '')            // Remove closing ```
+      .replace(/```js\s*/g, '')          // Remove opening ```js
+      .replace(/```\s*/g, '')            // Remove closing ```
+      .trim();                           // Remove extra whitespace
+    
+    // Save the script with proper imports (same as save-and-open-script)
+    const readableScript = `// Generated Playwright Test Script
+// Generated on: ${new Date(parseInt(timestamp)).toLocaleString()}
+// This script contains the test functions generated by AI
+
+const { test, expect } = require('@playwright/test');
+
+${cleanScriptContent}
+
+// To run this script, you can:
+// 1. Use the "Run Test" button in the AI Test Framework
+// 2. Or run manually with: npx playwright test ${filename}
+// 3. Or integrate into your Playwright test suite
+`;
+    
+    await fs.writeFile(filePath, readableScript, 'utf8');
+    
+    console.log('Script saved to:', filePath);
+    
+    // Run the generated script using direct execution (separate from recorder)
+    return await runGeneratedScript(filePath);
+  } catch (error) {
+    console.error('Error saving and running script:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+});
+
+app.whenReady().then(async () => {
+  // Initialize session first
+  initializeSession();
   
+  let missing = [];
+  for (const key of REQUIRED_SECRETS) {
+    const value = await keytar.getPassword('ai-test-framework', key);
+    if (!value) missing.push(key);
+  }
+  createWindow();
+  if (missing.length) {
+    mainWindow.webContents.on('did-finish-load', () => {
+      mainWindow.webContents.send('show-secrets-modal');
+    });
+  } else {
+    await loadSecrets();
+    startApiServer();
+    
+    // Schedule session cleanup
+    scheduleSessionCleanup();
+    
+    // Run initial cleanup after a short delay
+    setTimeout(async () => {
+      console.log('Running initial session cleanup...');
+      await cleanupOldSessionData();
+    }, 5000); // 5 seconds delay
+  }
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
@@ -89,6 +604,15 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', function () {
   if (process.platform !== 'darwin') app.quit();
+});
+
+// Handle uncaught exceptions and rejections
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
 // Helper function to fix CSS selectors
@@ -312,7 +836,7 @@ logTestCompletion();`}
     let testContent = `// Converted from Playwright recording
 const fs = require('fs');
 const path = require('path');
-const { chromium } = require('playwright');
+const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
 
 const logFile = '${logFilePath.replace(/\\/g, '\\\\')}';
 
@@ -642,6 +1166,13 @@ async function processScrollData(scriptPath, scrollData) {
   }
 }
 
+const getRecordingsDir = () => {
+  if (app.isPackaged) {
+    return path.join(app.getPath('userData'), 'recordings');
+  }
+  return path.join(__dirname, '../playwright/recordings');
+};
+
 // Start Playwright codegen recording
 ipcMain.handle('start-codegen', async (event, url) => {
   return new Promise((resolve, reject) => {
@@ -653,9 +1184,11 @@ ipcMain.handle('start-codegen', async (event, url) => {
       // Log user home directory for debugging
       console.log('User home directory:', os.homedir());
       
+      const recordingsDir = getRecordingsDir();
+      console.log('DEBUG: About to ensureDir for recordings at:', recordingsDir);
       // Run playwright codegen with explicit output path
       const timestamp = new Date().toISOString().replace(/:/g, '-').replace(/\..+/, '');
-      const outputFilePath = path.join(__dirname, `../playwright/recordings/playwright-recording-${Date.now()}.js`);
+      const outputFilePath = path.join(recordingsDir, `playwright-recording-${Date.now()}.js`);
       console.log('Setting output path to:', outputFilePath);
       
       // Check if we should use our custom recorder (with scroll tracking)
@@ -671,7 +1204,7 @@ ipcMain.handle('start-codegen', async (event, url) => {
           
           (async () => {
             try {
-              await recorder.startRecording(url);
+              await recorder.startRecording(url, recordingsDir);
               
               // Wait for user to close the browser window manually
               // This is handled by the exportCodegenBtn.onclick in the renderer
@@ -740,6 +1273,7 @@ ipcMain.handle('export-codegen', async (event, lastRecordingPath) => {
   try {
     console.log('Exporting codegen to spec file, source:', lastRecordingPath || 'unknown');
     
+    const recordingsDir = getRecordingsDir();
     // Look for the most recent recording file if none specified
     let sourcePath = lastRecordingPath;
     if (!sourcePath) {
@@ -749,7 +1283,7 @@ ipcMain.handle('export-codegen', async (event, lastRecordingPath) => {
         sourcePath = global.recordingOutputPath;
       } else {
         // Fall back to file system search
-        const recordingFiles = await glob(path.join(__dirname, '../playwright/recordings/playwright-recording-*.js'));
+        const recordingFiles = await glob(path.join(recordingsDir, 'playwright-recording-*.js'));
         if (recordingFiles.length > 0) {
           // Sort files by modification time (newest first)
           recordingFiles.sort((a, b) => fs.statSync(b).mtime - fs.statSync(a).mtime);
@@ -770,7 +1304,11 @@ ipcMain.handle('export-codegen', async (event, lastRecordingPath) => {
     
     // Create timestamp-based filename
     const timestamp = new Date().toISOString().replace(/:/g, '-').replace(/\..+/, '');
-    const exportPath = path.join(__dirname, '../../generated/exports', `test-${timestamp}.spec.js`);
+    const exportBaseDir = app.isPackaged
+      ? path.join(app.getPath('userData'), 'exports')
+      : path.join(__dirname, '../../generated/exports');
+    await fs.ensureDir(exportBaseDir);
+    const exportPath = path.join(exportBaseDir, `test-${timestamp}.spec.js`);
     console.log('Export path:', exportPath);
     
     // Create exports directory if it doesn't exist
@@ -839,18 +1377,21 @@ ipcMain.handle('export-codegen', async (event, lastRecordingPath) => {
     // Make sure we add wait times to the generated script
     await ensureWaitTimesInScript(exportPath);
     
-    // Add this test to the list of codegen recordings in MongoDB
+    // Add this test to the list of codegen recordings in MongoDB with user isolation
     if (process.env.MONGODB_URI && process.env.MONGODB_DB) {
       try {
-        const client = new MongoClient(process.env.MONGODB_URI, { useUnifiedTopology: true });
+        const client = new MongoClient(process.env.MONGODB_URI, {});
         await client.connect();
         const db = client.db(process.env.MONGODB_DB);
         const collection = db.collection('codegen_recordings');
+        const session = getCurrentSession();
         await collection.insertOne({
           name: path.basename(exportPath),
           path: exportPath,
           date: new Date().toISOString(),
-          content: scriptContent
+          content: scriptContent,
+          userId: session.userId,
+          sessionId: session.sessionId
         });
         await client.close();
       } catch (mongoErr) {
@@ -1031,8 +1572,8 @@ async function ensureWaitTimesInScript(scriptPath) {
   }
 }
 
-// Run a test using Playwright
-ipcMain.handle('run-test', async (event, filePath) => {
+// Function to run a test file
+async function runTestFile(filePath) {
   try {
     console.log('Running test file:', filePath);
     
@@ -1049,8 +1590,8 @@ ipcMain.handle('run-test', async (event, filePath) => {
     if (filePath.endsWith('.spec.js')) {
       const converted = await convertCodegenToTestFormat(filePath);
       testOutput = converted.scriptPath;
-    } else if (filePath.endsWith('.node.js')) {
-      // Already converted, use as is
+    } else if (filePath.endsWith('.node.js') || filePath.endsWith('.js')) {
+      // Already converted or plain JS, use as is
       testOutput = filePath;
     } else {
       return {
@@ -1064,16 +1605,28 @@ ipcMain.handle('run-test', async (event, filePath) => {
     // Set environment variables to control browser visibility
     const env = {
       ...process.env,
-      // PWDEBUG: '1', // Remove debug mode by default
       HEADLESS: 'false',
-      SLOWMO: '500' // Slow down by 500ms between actions for visibility
+      SLOWMO: '500'
     };
-    
+    const nodeModulesPath = app.isPackaged
+      ? path.join(process.resourcesPath, 'node_modules')
+      : path.join(__dirname, '../../node_modules');
+    const playwrightPath = app.isPackaged
+      ? path.join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', 'playwright')
+      : 'playwright';
+    const envWithNodePath = {
+      ...env,
+      NODE_PATH: nodeModulesPath,
+      PLAYWRIGHT_PATH: playwrightPath
+    };
     // Run the test with node
     return new Promise((resolve) => {
       const testProcess = spawn('node', [testOutput], {
-        env,
-        stdio: ['ignore', 'pipe', 'pipe']
+        env: envWithNodePath,
+        stdio: ['ignore', 'pipe', 'pipe'],
+        cwd: app.isPackaged
+          ? process.resourcesPath
+          : path.join(__dirname, '../../')
       });
       
       let output = '';
@@ -1116,13 +1669,276 @@ ipcMain.handle('run-test', async (event, filePath) => {
       error: error.message
     };
   }
-}); 
+}
+
+// Function to run a Playwright test file using the Playwright test runner
+async function runPlaywrightTest(filePath) {
+  try {
+    console.log('Running Playwright test file:', filePath);
+    
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return {
+        success: false,
+        error: `Test file does not exist: ${filePath}`
+      };
+    }
+    
+    console.log('Running Playwright test file:', JSON.stringify(filePath));
+    
+    // Set environment variables
+    const env = {
+      ...process.env,
+      HEADLESS: 'false',
+      SLOWMO: '500'
+    };
+    
+    // Run the test file using Playwright test runner
+    const startTime = Date.now();
+    
+    // Using npx to run playwright test (no need for manual path resolution)
+    console.log('Using npx playwright test');
+    
+    // Get the path to the Playwright config file
+    const configPath = path.join(__dirname, '../../config/playwright.config.js');
+    console.log('Using config file:', configPath);
+    
+    const result = await new Promise((resolve, reject) => {
+      // Use the project root as working directory instead of the file directory
+      const workingDir = path.join(__dirname, '../../');
+      console.log('Working directory:', workingDir);
+      console.log('File path:', filePath);
+      console.log('Config path:', configPath);
+      
+      // Use node with playwright CLI directly (avoid npx PATH issues)
+      const playwrightCliPath = path.join(__dirname, '../../node_modules', 'playwright', 'cli.js');
+      
+      // Get just the filename without the full path
+      const fileName = path.basename(filePath);
+      
+      const args = [
+        playwrightCliPath,
+        'test', 
+        fileName,
+        '--config=' + configPath,
+        '--reporter=list',
+        '--headed'
+      ];
+      
+      console.log('Executing command: node', args.join(' '));
+      
+      const childProcess = spawn('node', args, {
+        env: env,
+        cwd: workingDir,
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+      
+      let stdout = '';
+      let stderr = '';
+      
+      childProcess.stdout.on('data', (data) => {
+        stdout += data.toString();
+      });
+      
+      childProcess.stderr.on('data', (data) => {
+        const chunk = data.toString();
+        stderr += chunk;
+        console.error('Playwright stderr:', chunk);
+      });
+      
+
+      
+      childProcess.on('error', (err) => {
+        console.error('Child process error:', err);
+        reject(err);
+      });
+      
+      // Add timeout to prevent hanging
+      const timeout = setTimeout(() => {
+        console.log('Process timeout - killing child process');
+        childProcess.kill('SIGTERM');
+        resolve({
+          success: false,
+          output: stdout,
+          error: 'Process timed out after 30 seconds',
+          duration: Date.now() - startTime
+        });
+      }, 30000);
+      
+      childProcess.on('close', (code) => {
+        clearTimeout(timeout);
+        const duration = Date.now() - startTime;
+        console.log('Playwright test exited with code', code, 'duration:', duration + 'ms');
+        console.log('Output captured:', stdout.length, 'chars');
+        console.log('Error output captured:', stderr.length, 'chars');
+        console.log('Final output length:', stdout.length);
+        console.log('First 100 chars of output:', stdout.substring(0, 100));
+        if (stderr.length > 0) {
+          console.log('First 200 chars of error:', stderr.substring(0, 200));
+        }
+        
+        resolve({
+          success: code === 0,
+          output: stdout,
+          error: stderr,
+          duration: duration
+        });
+      });
+    });
+    
+    return result;
+  } catch (error) {
+    console.error('Error running Playwright test file:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+// Function to run generated scripts with Playwright test runner (separate from recorder)
+async function runGeneratedScript(filePath) {
+  try {
+    console.log('Running generated script with Playwright:', filePath);
+    
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return {
+        success: false,
+        error: `Test file does not exist: ${filePath}`
+      };
+    }
+    
+    const startTime = Date.now();
+    
+    // Set environment variables
+    const env = {
+      ...process.env,
+      HEADLESS: 'false',
+      SLOWMO: '500'
+    };
+    
+    // Get the path to the Playwright CLI
+    const playwrightCliPath = path.join(__dirname, '../../node_modules', 'playwright', 'cli.js');
+    
+    // Create a temporary config file specifically for this test
+    const tempConfigPath = path.join(path.dirname(filePath), 'temp-playwright.config.js');
+    const tempConfig = `
+const { defineConfig, devices } = require('@playwright/test');
+
+module.exports = defineConfig({
+  testDir: '.',
+  fullyParallel: false,
+  forbidOnly: false,
+  retries: 0,
+  workers: 1,
+  reporter: 'list',
+  use: {
+    headless: false,
+    viewport: { width: 1280, height: 720 },
+    ignoreHTTPSErrors: true,
+    actionTimeout: 20000,
+    bypassCSP: true,
+  },
+  projects: [
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
+    },
+  ],
+  timeout: 30000,
+  testMatch: ['${path.basename(filePath)}'],
+  quiet: false,
+});
+`;
+    
+    await fs.writeFile(tempConfigPath, tempConfig, 'utf8');
+    
+    // Run the test with Playwright using the temp config
+    const result = await new Promise((resolve, reject) => {
+      const childProcess = spawn('node', [
+        playwrightCliPath,
+        'test',
+        '--config=' + tempConfigPath,
+        '--reporter=list',
+        '--headed'
+      ], {
+        env: env,
+        cwd: path.dirname(filePath),
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+      
+      let stdout = '';
+      let stderr = '';
+      
+      childProcess.stdout.on('data', (data) => {
+        stdout += data.toString();
+        console.log('Generated script stdout:', data.toString());
+      });
+      
+      childProcess.stderr.on('data', (data) => {
+        stderr += data.toString();
+        console.error('Generated script stderr:', data.toString());
+      });
+      
+      childProcess.on('close', (code) => {
+        // Clean up temp config file
+        try {
+          fs.unlinkSync(tempConfigPath);
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+        
+        const duration = Date.now() - startTime;
+        console.log('Generated script test exited with code', code, 'duration:', duration + 'ms');
+        
+        resolve({
+          success: code === 0,
+          output: stdout,
+          error: stderr,
+          duration: duration
+        });
+      });
+      
+      childProcess.on('error', (err) => {
+        // Clean up temp config file
+        try {
+          fs.unlinkSync(tempConfigPath);
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+        
+        console.error('Generated script child process error:', err);
+        reject(err);
+      });
+    });
+    
+    return result;
+  } catch (error) {
+    console.error('Error running generated script:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+// Run a test using Playwright
+ipcMain.handle('run-test', async (event, filePath) => {
+  return await runTestFile(filePath);
+});
+
+// Run a generated script using the same method as regular tests
+ipcMain.handle('run-generated-script', async (event, filePath) => {
+  return await runTestFile(filePath);
+});
 
 ipcMain.handle('stop-recording', async (event) => {
   try {
+    const recordingsDir = getRecordingsDir();
     console.log('Stopping custom recording');
     const recorder = require('../playwright/recorder');
-    const result = await recorder.stopRecording();
+    const result = await recorder.stopRecording(recordingsDir);
     
     if (result && result.outputPath) {
       console.log('Recording stopped and saved to:', result.outputPath);
@@ -1160,16 +1976,16 @@ function startApiServer() {
   app.use(bodyParser.json());
   app.use(bodyParser.urlencoded({ extended: true }));
 
-  // Add Sentry context for each request (IP, URL, headers, body)
+  // Add Sentry context for each request (IP, URL, headers, body) - Simplified
   app.use((req, res, next) => {
-    SentryNode.getCurrentScope().setContext('request', {
-      ip: req.ip,
-      url: req.originalUrl,
-      headers: req.headers,
-      body: req.body,
-    });
-    // Example: set a static user (replace with real user info if available)
-    SentryNode.getCurrentScope().setUser({ id: 'anonymous', ip_address: req.ip });
+    try {
+      // Only set basic context to avoid integration conflicts
+      SentryNode.getCurrentScope().setTag('endpoint', req.originalUrl);
+      SentryNode.getCurrentScope().setTag('method', req.method);
+    } catch (error) {
+      // Silently handle Sentry context errors
+      console.warn('Sentry context error:', error.message);
+    }
     next();
   });
 
@@ -1201,13 +2017,33 @@ function startApiServer() {
   });
 
   // OpenAI setup
-  const tracer = new LangChainTracer({ projectName: process.env.LANGCHAIN_PROJECT || 'ai-test-case-generation' });
-  const llm = new ChatOpenAI({
-    modelName: 'gpt-3.5-turbo',
-    temperature: 0.7,
-    openAIApiKey: process.env.OPENAI_API_KEY,
-    callbacks: [tracer],
-  });
+  let tracer = null;
+  try {
+    if (process.env.LANGCHAIN_API_KEY) {
+      tracer = new LangChainTracer({ projectName: process.env.LANGCHAIN_PROJECT || 'ai-test-case-generation' });
+    }
+  } catch (error) {
+    console.warn('LangChain tracer initialization failed:', error.message);
+  }
+  
+  // Validate OpenAI API key before initializing ChatOpenAI
+  let llm = null;
+  if (!process.env.OPENAI_API_KEY) {
+    console.error('OpenAI API key not found in environment variables');
+    console.error('Please ensure OPENAI_API_KEY is set in your .env file or environment');
+    // Don't crash the app, just log the error and continue without LLM functionality
+  } else {
+    try {
+      llm = new ChatOpenAI({
+        modelName: 'gpt-3.5-turbo',
+        temperature: 0.7,
+        openAIApiKey: process.env.OPENAI_API_KEY,
+        callbacks: tracer ? [tracer] : [],
+      });
+    } catch (error) {
+      console.error('Failed to initialize ChatOpenAI:', error.message);
+    }
+  }
 
   const baseConfigs = {
     dashboard_functional: {
@@ -1279,10 +2115,24 @@ function startApiServer() {
           if (!config) continue;
           const prompt = `Task Title: ${itemIds.join(', ')}\nTask Description: ${jiraContent}\n\nGenerate EXACTLY ${config.count} ${config.description}.\n\nFor each test case:\n1. Use the prefix ${config.prefix}\n2. Focus exclusively on ${type} scenarios\n3. Include detailed steps\n4. Specify expected results\n5. Do not mix with other test types\n\nUse this EXACT format for each test case:\n\nTitle: ${config.prefix}_[Number]_[Brief_Title]\nScenario: [Detailed scenario description]\nSteps to reproduce:\n1. [Step 1]\n2. [Step 2]\n...\nExpected Result: [What should happen]\nActual Result: [To be filled during execution]\nPriority: [High/Medium/Low]`;
           const fullPrompt = 'You are a helpful QA test case generator.\n\n' + prompt;
-          const tracer = new LangChainTracer({ projectName: process.env.LANGCHAIN_PROJECT || 'ai-test-case-generation' });
-          const response = await llm.invoke(fullPrompt, { callbacks: [tracer] });
-          if (response.content) {
-            allTestCases.push(`TEST TYPE: ${type}\n\n${response.content}`);
+          console.log('Prompt sent to LLM:', fullPrompt); // <-- Add this log
+          let tracer = null;
+          try {
+            if (process.env.LANGCHAIN_API_KEY) {
+              tracer = new LangChainTracer({ projectName: process.env.LANGCHAIN_PROJECT || 'ai-test-case-generation' });
+            }
+          } catch (error) {
+            console.warn('LangChain tracer initialization failed:', error.message);
+          }
+          if (llm) {
+            const response = await llm.invoke(fullPrompt, { callbacks: tracer ? [tracer] : [] });
+            console.log('LLM response:', response.content); // <-- Add this log
+            if (response.content) {
+              allTestCases.push(`TEST TYPE: ${type}\n\n${response.content}`);
+            }
+          } else {
+            console.error('LLM not available - OpenAI API key not configured');
+            allTestCases.push(`TEST TYPE: ${type}\n\nERROR: OpenAI API key not configured. Please set OPENAI_API_KEY in your environment.`);
           }
         }
         testCases = allTestCases.join('\n\n');
@@ -1317,8 +2167,15 @@ function startApiServer() {
           if (!config) continue;
           const prompt = `Task Title: ${itemIds.join(', ')}\nTask Description: ${azureContent}\n\nGenerate EXACTLY ${config.count} ${config.description}.\n\nFor each test case:\n1. Use the prefix ${config.prefix}\n2. Focus exclusively on ${type} scenarios\n3. Include detailed steps\n4. Specify expected results\n5. Do not mix with other test types\n\nUse this EXACT format for each test case:\n\nTitle: ${config.prefix}_[Number]_[Brief_Title]\nScenario: [Detailed scenario description]\nSteps to reproduce:\n1. [Step 1]\n2. [Step 2]\n...\nExpected Result: [What should happen]\nActual Result: [To be filled during execution]\nPriority: [High/Medium/Low]`;
           const fullPrompt = 'You are a helpful QA test case generator.\n\n' + prompt;
-          const tracer = new LangChainTracer({ projectName: process.env.LANGCHAIN_PROJECT || 'ai-test-case-generation' });
-          const response = await llm.invoke(fullPrompt, { callbacks: [tracer] });
+          let tracer = null;
+          try {
+            if (process.env.LANGCHAIN_API_KEY) {
+              tracer = new LangChainTracer({ projectName: process.env.LANGCHAIN_PROJECT || 'ai-test-case-generation' });
+            }
+          } catch (error) {
+            console.warn('LangChain tracer initialization failed:', error.message);
+          }
+          const response = await llm.invoke(fullPrompt, { callbacks: tracer ? [tracer] : [] });
           if (response.content) {
             allTestCases.push(`TEST TYPE: ${type}\n\n${response.content}`);
           }
@@ -1331,8 +2188,15 @@ function startApiServer() {
           if (!config) continue;
           const prompt = `Task Title: Manual Test Case\nTask Description: ${data.manualDescription}\nSteps: ${data.manualSteps}\nExpected: ${data.manualExpected}\n\nGenerate EXACTLY ${config.count} ${config.description}.\n\nFor each test case:\n1. Use the prefix ${config.prefix}\n2. Focus exclusively on ${type} scenarios\n3. Include detailed steps\n4. Specify expected results\n5. Do not mix with other test types\n\nUse this EXACT format for each test case:\n\nTitle: ${config.prefix}_[Number]_[Brief_Title]\nScenario: [Detailed scenario description]\nSteps to reproduce:\n1. [Step 1]\n2. [Step 2]\n...\nExpected Result: [What should happen]\nActual Result: [To be filled during execution]\nPriority: [High/Medium/Low]`;
           const fullPrompt = 'You are a helpful QA test case generator.\n\n' + prompt;
-          const tracer = new LangChainTracer({ projectName: process.env.LANGCHAIN_PROJECT || 'ai-test-case-generation' });
-          const response = await llm.invoke(fullPrompt, { callbacks: [tracer] });
+          let tracer = null;
+          try {
+            if (process.env.LANGCHAIN_API_KEY) {
+              tracer = new LangChainTracer({ projectName: process.env.LANGCHAIN_PROJECT || 'ai-test-case-generation' });
+            }
+          } catch (error) {
+            console.warn('LangChain tracer initialization failed:', error.message);
+          }
+          const response = await llm.invoke(fullPrompt, { callbacks: tracer ? [tracer] : [] });
           if (response.content) {
             allTestCases.push(`TEST TYPE: ${type}\n\n${response.content}`);
           }
@@ -1363,27 +2227,37 @@ function startApiServer() {
           if (!config) continue;
           const prompt = `Task Title: Image-based Test Case\nTask Description: ${extractedText}\n\nGenerate EXACTLY ${config.count} ${config.description}.\n\nFor each test case:\n1. Use the prefix ${config.prefix}\n2. Focus exclusively on ${type} scenarios\n3. Include detailed steps\n4. Specify expected results\n5. Do not mix with other test types\n\nUse this EXACT format for each test case:\n\nTitle: ${config.prefix}_[Number]_[Brief_Title]\nScenario: [Detailed scenario description]\nSteps to reproduce:\n1. [Step 1]\n2. [Step 2]\n...\nExpected Result: [What should happen]\nActual Result: [To be filled during execution]\nPriority: [High/Medium/Low]`;
           const fullPrompt = 'You are a helpful QA test case generator.\n\n' + prompt;
-          const tracer = new LangChainTracer({ projectName: process.env.LANGCHAIN_PROJECT || 'ai-test-case-generation' });
-          const response = await llm.invoke(fullPrompt, { callbacks: [tracer] });
+          let tracer = null;
+          try {
+            if (process.env.LANGCHAIN_API_KEY) {
+              tracer = new LangChainTracer({ projectName: process.env.LANGCHAIN_PROJECT || 'ai-test-case-generation' });
+            }
+          } catch (error) {
+            console.warn('LangChain tracer initialization failed:', error.message);
+          }
+          const response = await llm.invoke(fullPrompt, { callbacks: tracer ? [tracer] : [] });
           if (response.content) {
             allTestCases.push(`TEST TYPE: ${type}\n\n${response.content}`);
           }
         }
         testCases = allTestCases.join('\n\n');
       }
-      // --- Store in MongoDB ---
+      // --- Store in MongoDB with user isolation ---
       if (process.env.MONGODB_URI && process.env.MONGODB_DB) {
         try {
-          const client = new MongoClient(process.env.MONGODB_URI, { useUnifiedTopology: true });
+          const client = new MongoClient(process.env.MONGODB_URI, {});
           await client.connect();
           const db = client.db(process.env.MONGODB_DB);
           const collection = db.collection('testcase_generator');
+          const session = getCurrentSession();
           await collection.insertOne({
             sourceType,
             testCaseTypes,
             userInput,
             generatedTestCases: testCases,
             codegenFile: req.body.codegenFile || '',
+            userId: session.userId,
+            sessionId: session.sessionId,
             timestamp: new Date()
           });
           await client.close();
@@ -1397,27 +2271,44 @@ function startApiServer() {
     }
   });
 
-  // --- Test Case History API ---
+  // --- Test Case History API with user isolation ---
   app.get('/api/testcase-history', async (req, res) => {
+    console.log('Test case history API called');
+    
     if (!process.env.MONGODB_URI || !process.env.MONGODB_DB) {
+      console.error('MongoDB not configured for test case history');
       return res.json({ success: false, error: 'MongoDB not configured.' });
     }
+    
     try {
-      const client = new MongoClient(process.env.MONGODB_URI, { useUnifiedTopology: true });
+      const session = getCurrentSession();
+      console.log('Current session:', { userId: session.userId, sessionId: session.sessionId });
+      
+      const client = new MongoClient(process.env.MONGODB_URI, {});
       await client.connect();
+      console.log('MongoDB connected successfully');
+      
       const db = client.db(process.env.MONGODB_DB);
       const collection = db.collection('testcase_generator');
-      const history = await collection.find({}).sort({ timestamp: -1 }).limit(500).toArray();
+      
+      const history = await collection.find({ 
+        userId: session.userId 
+      }).sort({ timestamp: -1 }).limit(500).toArray();
+      
+      console.log(`Found ${history.length} test cases for user ${session.userId}`);
+      
       await client.close();
       res.json({ success: true, history });
     } catch (err) {
+      console.error('Error fetching test case history:', err);
       res.json({ success: false, error: err.message });
     }
   });
 
-  // --- List available codegen files ---
+  // --- List available codegen files with user isolation ---
   app.get('/api/list-codegen-files', async (req, res) => {
     try {
+      // Get local files
       const codegenDirs = [path.join(__dirname, '../../generated/exports'), path.join(__dirname, '../playwright')];
       let files = [];
       for (const dir of codegenDirs) {
@@ -1425,6 +2316,29 @@ function startApiServer() {
           files = files.concat(fs.readdirSync(dir).filter(f => f.endsWith('.js')).map(f => path.join(path.basename(dir), f)));
         }
       }
+      
+      // Get MongoDB files for current user
+      if (process.env.MONGODB_URI && process.env.MONGODB_DB) {
+        try {
+          const client = new MongoClient(process.env.MONGODB_URI, {});
+          await client.connect();
+          const db = client.db(process.env.MONGODB_DB);
+          const collection = db.collection('codegen_recordings');
+          const session = getCurrentSession();
+          const mongoFiles = await collection.find({ 
+            userId: session.userId 
+          }).sort({ date: -1 }).limit(100).toArray();
+          await client.close();
+          
+          // Add MongoDB files to the list
+          mongoFiles.forEach(doc => {
+            files.push(`mongodb://${doc._id}`);
+          });
+        } catch (mongoErr) {
+          console.error('MongoDB query error:', mongoErr);
+        }
+      }
+      
       res.json({ success: true, files });
     } catch (err) {
       res.json({ success: false, error: err.message });
@@ -1440,11 +2354,15 @@ function startApiServer() {
       // If file looks like a MongoDB ObjectId, look up the path in codegen_recordings
       if (/^[a-fA-F0-9]{24}$/.test(file)) {
         const { MongoClient, ObjectId } = require('mongodb');
-        const client = new MongoClient(process.env.MONGODB_URI, { useUnifiedTopology: true });
+        const client = new MongoClient(process.env.MONGODB_URI, {});
         await client.connect();
         const db = client.db(process.env.MONGODB_DB);
         const collection = db.collection('codegen_recordings');
-        const doc = await collection.findOne({ _id: new ObjectId(file) });
+        const session = getCurrentSession();
+        const doc = await collection.findOne({ 
+          _id: new ObjectId(file),
+          userId: session.userId 
+        });
         await client.close();
         if (!doc || !doc.path) return res.json({ success: false, error: 'Codegen file not found in DB.' });
         filePath = doc.path;
@@ -1462,11 +2380,15 @@ function startApiServer() {
           // Try to fetch content from MongoDB by path
           if (process.env.MONGODB_URI && process.env.MONGODB_DB) {
             const { MongoClient } = require('mongodb');
-            const client = new MongoClient(process.env.MONGODB_URI, { useUnifiedTopology: true });
+            const client = new MongoClient(process.env.MONGODB_URI, {});
             await client.connect();
             const db = client.db(process.env.MONGODB_DB);
             const collection = db.collection('codegen_recordings');
-            const doc = await collection.findOne({ path: filePath });
+            const session = getCurrentSession();
+            const doc = await collection.findOne({ 
+              path: filePath,
+              userId: session.userId 
+            });
             await client.close();
             if (doc && doc.content) {
               return res.json({ success: true, content: doc.content });
@@ -1495,8 +2417,15 @@ function startApiServer() {
         for (const testCase of cases) {
           const prompt = `You are an expert Playwright automation engineer.\nGiven the following test case and a Playwright codegen file, generate a Playwright test function in JavaScript.\n\n- Only include the steps from the codegen file that are required to execute the test case.\n- Omit any unrelated or extra steps.\n- Do not include steps for actions not mentioned in the test case.\n- Use the selectors and structure from the codegen file wherever possible.\n- Use best practices, correct selectors, and realistic locators.\n- Use comments to indicate where selectors may need to be updated.\n\nTest Case:\n${testCase}\n\nPlaywright Codegen File:\n${codegenContent}\n\nOutput ONLY the Playwright test function, nothing else.`;
           // Create a new tracer for each LLM call to avoid LangSmith 409 Conflict
-          const tracer = new LangChainTracer({ projectName: process.env.LANGCHAIN_PROJECT || 'ai-test-case-generation' });
-          const response = await llm.invoke(prompt, { callbacks: [tracer] });
+          let tracer = null;
+          try {
+            if (process.env.LANGCHAIN_API_KEY) {
+              tracer = new LangChainTracer({ projectName: process.env.LANGCHAIN_PROJECT || 'ai-test-case-generation' });
+            }
+          } catch (error) {
+            console.warn('LangChain tracer initialization failed:', error.message);
+          }
+          const response = await llm.invoke(prompt, { callbacks: tracer ? [tracer] : [] });
           if (response.content) {
             allScripts += response.content + '\n\n';
           }
@@ -1504,19 +2433,22 @@ function startApiServer() {
       } else {
         return res.json({ success: false, error: 'Unsupported framework.' });
       }
-      // Store in MongoDB as before...
+      // Store in MongoDB with user isolation...
       if (process.env.MONGODB_URI && process.env.MONGODB_DB) {
         try {
-          const client = new MongoClient(process.env.MONGODB_URI, { useUnifiedTopology: true });
+          const client = new MongoClient(process.env.MONGODB_URI, {});
           await client.connect();
           const db = client.db(process.env.MONGODB_DB);
           const collection = db.collection('generated_scripts');
+          const session = getCurrentSession();
           await collection.insertOne({
             sourceType: req.body.sourceType || '',
             testCaseTypes: req.body.testCaseTypes || [],
             userInput: userInput,
             script: allScripts,
             codegenFile: req.body.codegenFile || '',
+            userId: session.userId,
+            sessionId: session.sessionId,
             timestamp: new Date()
           });
           await client.close();
@@ -1529,17 +2461,20 @@ function startApiServer() {
       res.json({ success: false, error: err.message });
     }
   });
-  // --- Fetch all generated scripts ---
+  // --- Fetch all generated scripts with user isolation ---
   app.get('/api/generated-scripts', async (req, res) => {
     if (!process.env.MONGODB_URI || !process.env.MONGODB_DB) {
       return res.json({ success: false, error: 'MongoDB not configured.' });
     }
     try {
-      const client = new MongoClient(process.env.MONGODB_URI, { useUnifiedTopology: true });
+      const client = new MongoClient(process.env.MONGODB_URI, {});
       await client.connect();
       const db = client.db(process.env.MONGODB_DB);
       const collection = db.collection('generated_scripts');
-      const scripts = await collection.find({}).sort({ timestamp: -1 }).limit(500).toArray();
+      const session = getCurrentSession();
+      const scripts = await collection.find({ 
+        userId: session.userId 
+      }).sort({ timestamp: -1 }).limit(500).toArray();
       await client.close();
       res.json({ success: true, scripts });
     } catch (err) {
@@ -1548,12 +2483,25 @@ function startApiServer() {
   });
 
   // Place this after all routes, before any error-handling middleware
-  SentryNode.setupExpressErrorHandler(app);
+  // Sentry error handler disabled to prevent integration conflicts
+  // try {
+  //   SentryNode.setupExpressErrorHandler(app);
+  // } catch (error) {
+  //   console.warn('Sentry error handler setup failed:', error.message);
+  // }
+
+  // Test endpoint to verify API is working
+  app.get('/api/test', (req, res) => {
+    res.json({ 
+      success: true, 
+      message: 'API is working',
+      timestamp: new Date().toISOString(),
+      session: getCurrentSession()
+    });
+  });
 
   app.listen(3000, () => {
     console.log('AI Test Case Generation API running on http://localhost:3000');
   });
   serverStarted = true;
-}
-
-startApiServer(); 
+} 

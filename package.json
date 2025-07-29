@@ -1,8 +1,20 @@
 {
+  "name": "ai-test-framework",
+  "version": "1.0.0",
+  "description": "An AI-powered test automation framework using Electron, Playwright, and OpenAI.",
+  "author": "Abhishek Kumar",
+  "main": "src/electron/main.js",
+  "scripts": {
+    "build:preload": "mkdir dist-new\\src\\electron\\renderer 2>nul & copy src\\electron\\renderer\\renderer.js dist-new\\src\\electron\\renderer\\renderer.js",
+    "build": "npm run build:preload && electron-builder",
+    "start": "electron .",
+    "test": "playwright test",
+    "prebuild": "if not exist config\\.env copy config\\.env.example config\\.env"
+  },
   "dependencies": {
     "@playwright/test": "^1.54.1",
     "@sentry/electron": "^6.8.0",
-    "@sentry/node": "^8.55.0",
+    "@sentry/node": "^9.26.0",
     "axios": "^1.10.0",
     "body-parser": "^2.2.0",
     "cors": "^2.8.5",
@@ -11,22 +23,60 @@
     "exceljs": "^4.4.0",
     "express": "^5.1.0",
     "fs-extra": "^11.3.0",
+    "keytar": "^7.9.0",
     "langchain": "^0.0.189",
     "mongodb": "^5.9.2",
     "multer": "^2.0.2",
     "opena": "^0.1.19",
     "openai": "^5.10.1",
     "playwright": "^1.54.1",
+    "playwright-core": "^1.54.1",
     "tesseract.js": "^6.0.1",
     "winston": "^3.17.0",
     "winston-mongodb": "^7.0.0"
   },
-  "main": "src/electron/main.js",
-  "scripts": {
-    "start": "electron .",
-    "test": "playwright test"
-  },
   "devDependencies": {
-    "electron": "^37.2.1"
+    "electron": "^37.2.1",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.abhishek.aitestframework",
+    "productName": "AI Test Framework",
+    "directories": {
+      "output": "dist-new"
+    },
+    "files": [
+      "config/.env",
+      "config/**",
+      "src/**",
+      "scripts/**",
+      "tests/**",
+      "generated/**",
+      "uploads/**",
+      "exports/**",
+      "assets/**",
+      "package.json",
+      "node_modules/playwright/**",
+      "node_modules/playwright-core/**",
+      "node_modules/@playwright/**"
+    ],
+    "asarUnpack": [
+      "node_modules/playwright/**",
+      "node_modules/playwright-core/**",
+      "node_modules/@playwright/**",
+      "src/electron/renderer/renderer.js"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowToChangeInstallationDirectory": true
+    },
+    "forceCodeSigning": false,
+    "removePackageScripts": false,
+    "removePackageKeywords": false,
+    "compression": "store"
   }
 }

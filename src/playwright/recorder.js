@@ -15,7 +15,7 @@ const scrollThreshold = 100; // Minimum pixels scrolled before recording a new e
  * @param {string} url - The URL to navigate to
  * @param {string} device - Optional device emulation
  */
-async function startRecording(url = 'https://example.com', device = null) {
+async function startRecording(url = 'https://example.com', device = null, recordingsDir = null) {
   initialUrl = url;
   browser = await chromium.launch({ headless: false });
   context = device ? await browser.newContext({ ...devices[device] }) : await browser.newContext();
@@ -359,14 +359,19 @@ async function startRecording(url = 'https://example.com', device = null) {
 /**
  * Stop recording and close the browser
  */
-async function stopRecording() {
+async function stopRecording(recordingsDir = null) {
   if (browser) {
     // Generate scroll steps based on recorded scroll positions
     const scrollSteps = generateScrollSteps(scrollPositions);
     
     // Save the recording to a file
-    const timestamp = Date.now();
-    const outputPath = path.join(__dirname, '..', `playwright-recording-${timestamp}.js`);
+    const dir = recordingsDir || global._recordingsDir || path.join(__dirname, 'recordings');
+    // Safety check: if dir exists and is not a directory, delete it
+    if (fs.existsSync(dir) && !fs.lstatSync(dir).isDirectory()) {
+      fs.unlinkSync(dir);
+    }
+    await fs.ensureDir(dir);
+    const outputPath = path.join(dir, `playwright-recording-${Date.now()}.js`);
     
     // Generate script content
     const scriptContent = generateScriptFromRecording(steps, scrollSteps, initialUrl);

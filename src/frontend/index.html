@@ -51,10 +51,13 @@
       color: white;
       padding: 1rem 2rem;
       box-shadow: var(--box-shadow);
-      text-align: center;
       position: sticky;
       top: 0;
       z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
     }
 
     .header h1 {
@@ -68,6 +71,33 @@
         display: flex;
         gap: 1.5rem;
         justify-content: center;
+    }
+
+    .settings-icon-btn {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: var(--transition);
+      color: white;
+    }
+
+    .settings-icon-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: scale(1.1);
+    }
+
+    .settings-icon-btn svg {
+      width: 20px;
+      height: 20px;
     }
 
     .main-content {
@@ -281,7 +311,7 @@
     .data-table thead tr { background-color: #f0f0f0; }
     .data-table th { padding: 10px 12px; border-bottom: 1px solid #ddd; color: #333; font-weight: 600; text-align: left; }
     .data-table td { padding: 10px; border: 1px solid #eee; word-wrap: break-word; }
-    .data-table .action-btn { padding: 6px 12px; color: #fff; border: none; border-radius: 4px; font-weight: 500; cursor: pointer; }
+    .data-table .action-btn { padding: 6px 12px; color: #fff; border: none; border-radius: 4px; font-weight: 500; cursor: pointer; margin-right: 4px; }
 
     /* Modal Styles */
     .modal {
@@ -342,6 +372,85 @@
     #testcase-modal .spinner { display: none; margin: 1rem auto; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 32px; height: 32px; animation: spin 1s linear infinite; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
+    /* Settings Section Styles */
+    .settings-group {
+      margin-bottom: 2rem;
+      padding-bottom: 2rem;
+      border-bottom: 1px solid var(--grey);
+    }
+    .settings-group h4 {
+      margin-bottom: 1rem;
+      font-size: 1.1rem;
+      color: var(--primary);
+      font-weight: 600;
+    }
+    .form-group {
+      margin-bottom: 1rem;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      color: var(--dark);
+    }
+    .form-group input[type="text"], .form-group input[type="password"] {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--grey);
+      border-radius: var(--border-radius);
+      font-size: 1rem;
+      transition: var(--transition);
+      outline: none;
+    }
+    .form-group input[type="text"]:focus, .form-group input[type="password"]:focus {
+      border-color: var(--primary);
+    }
+    .form-group small {
+      display: block;
+      margin-top: 0.5rem;
+      font-size: 0.8rem;
+      color: #6c757d;
+    }
+    .settings-actions {
+      margin-top: 2rem;
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .app-info {
+      margin-top: 2rem;
+      padding: 1.5rem;
+      background-color: #f8f9fa;
+      border-radius: var(--border-radius);
+      border: 1px solid var(--grey);
+    }
+    .app-info p {
+      margin-bottom: 0.5rem;
+      font-size: 0.9rem;
+    }
+    .app-info strong {
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    /* Settings Modal Styles */
+    .settings-modal-content {
+      max-width: 800px;
+      max-height: 90vh;
+      overflow-y: auto;
+      width: 90%;
+    }
+
+    .settings-modal-content .card {
+      margin-bottom: 1.5rem;
+      box-shadow: none;
+      border: 1px solid var(--grey);
+    }
+
+    .settings-modal-content .card:last-child {
+      margin-bottom: 0;
+    }
+
   </style>
 </head>
 <body>
@@ -353,6 +462,12 @@
         <button id="tab-history" class="btn btn-secondary" data-target="testcase-history-section">Test Case History</button>
         <button id="tab-scripts" class="btn btn-secondary" data-target="generated-scripts-section">Generated Scripts</button>
       </nav>
+      <button id="settings-btn" class="settings-icon-btn" title="Settings">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </button>
     </header>
 
     <main class="main-content" id="main-content">
@@ -424,6 +539,81 @@
       <div class="table-container"><div id="generated-scripts-table"></div></div>
     </section>
 
+    <div id="settings-modal" class="modal">
+      <div class="modal-content settings-modal-content">
+        <span id="close-settings-modal" class="modal-close-btn">&times;</span>
+        <h2 class="modal-title">Settings & Configuration</h2>
+        
+        <div class="card">
+          <h3 class="card-title">API Keys & Configuration</h3>
+          <p class="info-box">Manage your API keys and configuration settings. These settings are stored securely using your system's credential manager.</p>
+          
+          <form id="settings-form">
+            <div class="settings-group">
+              <h4>Required Settings</h4>
+              <div class="form-group">
+                <label for="settings-openai-key">OpenAI API Key:</label>
+                <input type="password" id="settings-openai-key" name="OPENAI_API_KEY" placeholder="sk-..." />
+                <small>Your OpenAI API key for AI-powered test generation</small>
+              </div>
+              <div class="form-group">
+                <label for="settings-mongodb-uri">MongoDB URI:</label>
+                <input type="text" id="settings-mongodb-uri" name="MONGODB_URI" placeholder="mongodb://localhost:27017" />
+                <small>MongoDB connection string for storing test data</small>
+              </div>
+              <div class="form-group">
+                <label for="settings-mongodb-db">MongoDB Database Name:</label>
+                <input type="text" id="settings-mongodb-db" name="MONGODB_DB" placeholder="ai_test_framework" />
+                <small>Database name for storing test cases and scripts</small>
+              </div>
+            </div>
+
+            <div class="settings-group">
+              <h4>Optional Settings</h4>
+              <div class="form-group">
+                <label for="settings-langchain-tracking">LangChain Tracking V2:</label>
+                <input type="text" id="settings-langchain-tracking" name="LANGCHAIN_TRACKING_V2" placeholder="true" />
+                <small>Enable LangChain tracking (true/false)</small>
+              </div>
+              <div class="form-group">
+                <label for="settings-langchain-api-key">LangChain API Key:</label>
+                <input type="password" id="settings-langchain-api-key" name="LANGCHAIN_API_KEY" placeholder="ls_..." />
+                <small>LangChain API key for enhanced tracking</small>
+              </div>
+              <div class="form-group">
+                <label for="settings-langchain-project">LangChain Project:</label>
+                <input type="text" id="settings-langchain-project" name="LANGCHAIN_PROJECT" placeholder="ai-test-case-generation" />
+                <small>Project name for LangChain tracking</small>
+              </div>
+              <div class="form-group">
+                <label for="settings-langsmith-endpoint">LangSmith Endpoint:</label>
+                <input type="text" id="settings-langsmith-endpoint" name="LANGSMITH_ENDPOINT" placeholder="https://api.smith.langchain.com" />
+                <small>LangSmith API endpoint URL</small>
+              </div>
+            </div>
+
+            <div class="settings-actions">
+              <button type="submit" class="btn btn-primary">Save Settings</button>
+              <button type="button" id="load-current-settings" class="btn btn-secondary">Load Current Settings</button>
+              <button type="button" id="test-connection" class="btn btn-info">Test Connection</button>
+            </div>
+          </form>
+          
+          <div id="settings-message" class="info-box" style="display: none;"></div>
+        </div>
+
+        <div class="card">
+          <h3 class="card-title">Application Information</h3>
+          <div class="app-info">
+            <p><strong>Version:</strong> <span id="app-version">1.0.0</span></p>
+            <p><strong>Platform:</strong> <span id="app-platform"></span></p>
+            <p><strong>Node.js Version:</strong> <span id="node-version"></span></p>
+            <p><strong>Electron Version:</strong> <span id="electron-version"></span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <footer class="footer">
       <p>AI Test Framework Recorder &copy; 2025</p>
     </footer>
@@ -475,6 +665,45 @@
           <div class="spinner" id="testcase-spinner"></div>
         </form>
         <div id="testcase-result" style="display:none;"></div>
+      </div>
+    </div>
+
+    <div id="secrets-modal" class="modal">
+      <div class="modal-content">
+        <span id="close-secrets-modal" class="modal-close-btn">&times;</span>
+        <h2>Enter Required Secrets</h2>
+        <form id="secrets-form">
+          <div>
+            <label for="openai-key">OpenAI API Key:</label>
+            <input type="text" id="openai-key" name="OPENAI_API_KEY" required />
+          </div>
+          <div>
+            <label for="mongodb-uri">MongoDB URI:</label>
+            <input type="text" id="mongodb-uri" name="MONGODB_URI" required />
+          </div>
+          <div>
+            <label for="mongodb-db">MongoDB DB Name:</label>
+            <input type="text" id="mongodb-db" name="MONGODB_DB" required />
+          </div>
+          <div>
+            <label for="langchain-tracking">LangChain Tracking V2:</label>
+            <input type="text" id="langchain-tracking" name="LANGCHAIN_TRACKING_V2" />
+          </div>
+          <div>
+            <label for="langchain-api-key">LangChain API Key:</label>
+            <input type="text" id="langchain-api-key" name="LANGCHAIN_API_KEY" />
+          </div>
+          <div>
+            <label for="langchain-project">LangChain Project:</label>
+            <input type="text" id="langchain-project" name="LANGCHAIN_PROJECT" />
+          </div>
+          <div>
+            <label for="langsmith-endpoint">LangSmith Endpoint:</label>
+            <input type="text" id="langsmith-endpoint" name="LANGSMITH_ENDPOINT" />
+          </div>
+          <button type="submit" class="btn btn-primary">Save Secrets</button>
+        </form>
+        <div id="secrets-modal-message"></div>
       </div>
     </div>
 

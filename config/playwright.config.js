@@ -5,7 +5,7 @@ const { defineConfig, devices } = require('@playwright/test');
  * @see https://playwright.dev/docs/test-configuration
  */
 module.exports = defineConfig({
-  testDir: '../generated/exports',
+  testDir: './generated/exports',
   fullyParallel: false,
   forbidOnly: false,
   retries: 0,
@@ -19,7 +19,7 @@ module.exports = defineConfig({
     screenshot: 'on',
     trace: 'on',
     // Lower timeout for faster feedback
-    actionTimeout: 15000,
+    actionTimeout: 20000,
     // Don't fail on console errors
     bypassCSP: true,
   },
@@ -35,8 +35,8 @@ module.exports = defineConfig({
   /* Maximum time one test can run */
   timeout: 30000,
   
-  /* Look for test files with test.js extension */
-  testMatch: '**/*.test.js',
+  /* Look for test files with test.js extension or generated scripts */
+  testMatch: ['**/*.test.js', '**/generated-script-*.js', 'generated-script-*.js', '*.js'],
   
   /* More output for debugging */
   quiet: false,
